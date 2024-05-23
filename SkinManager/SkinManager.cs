@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SkinManager
 {
-    public class Class1
+    public class SkinManager
     {
 
     }
