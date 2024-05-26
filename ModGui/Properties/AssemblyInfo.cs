@@ -1,20 +1,15 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using MelonLoader;
-using SkinManager;
-
-[assembly: MelonInfo(typeof(Costumizer), "SkinManager", "0.1", "Ziegelstein")]
-[assembly: MelonGame("", "")]
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("SkinManager")]
+[assembly: AssemblyTitle("ModGui")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("SkinManager")]
+[assembly: AssemblyProduct("ModGui")]
 [assembly: AssemblyCopyright("Copyright ©  2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -25,7 +20,7 @@ using SkinManager;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("e850b822-2136-4ef6-8bf6-bc2121efa6f8")]
+[assembly: Guid("d83c99df-eea6-4bbd-af36-9fda122b58d3")]
 
 // Version information for an assembly consists of the following four values:
 //
