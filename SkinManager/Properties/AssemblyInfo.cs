@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using MelonLoader;
 using SkinManager;
 
-[assembly: MelonInfo(typeof(Costumizer), "SkinManager", "0.1", "Ziegelstein")]
+[assembly: MelonInfo(typeof(Costumizer), "CustomizationManager", "0.1", "Ziegelstein")]
 [assembly: MelonGame("", "")]
 
 // General Information about an assembly is controlled through the following
