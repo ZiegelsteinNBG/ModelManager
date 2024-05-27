@@ -11,11 +11,8 @@ using System;
 
 namespace SkinManager
 {
-    public class Costumizer: MelonMod
+    internal class Costumizer: MelonMod
     {
-
-        bool DrawImguiMenu = true;
-
         public override void OnApplicationStart()
         {
             MelonLogger.Msg("Set runInBackground to yes for Overlay...");
@@ -25,7 +22,7 @@ namespace SkinManager
 
         }
         bool loaded = false;
-        public void OnUpdate1()
+        public override void OnUpdate()
         {
             base.OnUpdate();
             
