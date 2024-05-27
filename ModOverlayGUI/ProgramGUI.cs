@@ -12,8 +12,8 @@ namespace ModGUI
     public class ProgramGUI : Overlay
     {
         static String gameName = "Signalis";
-        static int game_pid = 0;
         bool showGui = true;
+
 
         float size = 1;
         bool auto_deselect = false;
@@ -29,6 +29,7 @@ namespace ModGUI
         }
         protected override void Render()
         {
+            if(Process.GetProcessesByName(gameName).Length == 0)Close();
             if (GetAsyncKeyState(0x76) < 0)
             {
                 showGui = !showGui;
@@ -54,22 +55,15 @@ namespace ModGUI
             }
         }
 
-
         public static void Main(string[] args)
         {
             Console.WriteLine("Starting Overlay...");
             Process[] processes = Process.GetProcessesByName(gameName);
-            if (true)//(processes.Length > 0)
+            if (processes.Length > 0)//(processes.Length > 0)
             {
-                foreach (var process in processes)
-                {
-                    Console.WriteLine($"Game PID: {process.Id}");
-                    game_pid = process.Id;
-
-                }
-                Process gameProc = Process.GetProcessById(game_pid);
                 ProgramGUI programGUI = new ProgramGUI();
-                programGUI.Start().Wait();
+                Console.WriteLine($"Game PID: {processes[0].Id}");
+                programGUI.Start().Wait(); 
             }
             else
             {
