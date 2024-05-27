@@ -49,10 +49,13 @@ namespace ModOverlayGUI
             }
         }
     }
-
+    [Serializable]
     public class ModData
     {
-        public bool IsCheckboxChecked { get; set; }
+        private bool IsCheckboxChecked { get; set; }
     }
+
+
+
 }
  
