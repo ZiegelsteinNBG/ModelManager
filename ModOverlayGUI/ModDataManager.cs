@@ -33,7 +33,9 @@ namespace ModOverlayGUI
             {
                 if (!File.Exists(settingsFilePath))
                 {
-                    return new ModData(); // Return default settings if file doesn't exist
+                    ModData modData = new ModData();
+                    modData.init = true;
+                    return modData; // Return default settings if file doesn't exist
                 }
 
                 XmlSerializer serializer = new XmlSerializer(typeof(ModData));
@@ -45,17 +47,42 @@ namespace ModOverlayGUI
             catch (Exception ex)
             {
                 Console.WriteLine("Error loading settings: " + ex.Message);
-                return new ModData(); // Return default settings in case of error
+                ModData modData = new ModData();
+                modData.init = true;
+                return modData; // Return default settings in case of error
             }
         }
     }
     [Serializable]
     public class ModData
     {
-        private bool IsCheckboxChecked { get; set; }
+        // Init
+        public bool init {  get; set; }
+        // PLayModel
+        public float playerModelSize { get; set; }
+
+        public List<ModelData> modelData { get; set; }
+
+        // WeaponModels
+        public float weaponModelSize { get; set; }
+        public bool weaponShowCase { get; set; }
+
+
+
     }
 
+    public class ModelData
+    {
+        public String modelName { get; }
+        public String[] modelParts {  get; }
+        public bool[] active {  get; set; }
 
+        public ModelData(String modelName, String[] modelParts, bool[] active) { 
+            this.modelName = modelName;
+            this.modelParts = modelParts;
+            this.active = active;
+        }
+    }
 
 }
  
