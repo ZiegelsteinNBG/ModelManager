@@ -90,11 +90,12 @@ namespace ModGUI
                     {
                         help = false;
                         ImGui.Text("\n");
-                        ImGui.SliderFloat("Weapon Size", ref weaponSize, 0.1f, 5f);
+                        ImGui.SeparatorText("Weapon Size");
+                        ImGui.SliderFloat("", ref weaponSize, 0.1f, 5f);
                         ImGui.Text("NOTICE: Weapon size model will affect gameplay\n -> bigger will be harder to aim, the more closer the enemy are\n ");
                         ImGui.Separator();
                         if (debugMod) { ImGui.Checkbox("Dynamic / Manual Mode", ref dynamicHolster); }
-                        ImGui.Text("Dynamic: Checks which Weapons are in the Inventory/ are equipped \nManual: Customize manually which Weapon should be shown");
+                        ImGui.Text("Dynamic: Checks which Weapons are in the Inventory/ is equipped \nManual: Customize manually which Weapon should be shown");
                         ImGui.Separator();
                         ImGui.BeginDisabled(dynamicHolster);
                         ImGui.Text("\nManual Selection");
