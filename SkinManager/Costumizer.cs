@@ -6,8 +6,7 @@ using System.IO;
 using System.Diagnostics;
 using UnityEngine.SceneManagement;
 using System;
-
-
+using UnityEngine;
 
 namespace SkinManager
 {
@@ -25,7 +24,10 @@ namespace SkinManager
         public override void OnUpdate()
         {
             base.OnUpdate();
-            
+            if (!loaded)
+            {
+                //loaded = true;
+            }
             if (false)
             {
                 Scene scene = SceneManager.GetActiveScene();
@@ -33,10 +35,110 @@ namespace SkinManager
                 if(scene.name == "LOV_Reeducation")
                 {
                     runGui();
-                    loaded = true;  
                 }
             }
 
+        }
+        public static string getFullPath(GameObject gameObject)
+        {
+            string path = "/" + gameObject.name;
+            Transform current = gameObject.transform;
+            while (current.parent != null)
+            {
+                current = current.parent;
+                path = "/" + current.name + path;
+            }
+            return path;
+        }
+
+        private GameObject copyObjectDDOL(String originPath, String newName)
+        {
+            GameObject originObject = GameObject.Find(originPath);
+            if(originObject == null)
+            {
+                MelonLogger.Error($"Method copyObjectDDOL failed at originPath: {originPath}");
+                return null;
+            }
+            GameObject copy = GameObject.Instantiate(originObject);
+            copy.name = newName;
+            GameObject.DontDestroyOnLoad(copy);
+            return copy;
+        }
+
+        private void copyModelSMR(String originPath, String destinationPath)
+        {
+            GameObject originObject = GameObject.Find(originPath);
+            GameObject destinationObject = GameObject.Find(destinationPath);
+            if (originObject == null)
+            {
+                MelonLogger.Error($"copyModel failed at originPath: {originPath}");
+                return;
+            }
+            if (destinationObject == null)
+            {
+                MelonLogger.Error($"copyModel failed at originPath: {destinationPath}");
+                return;
+            }
+
+            SkinnedMeshRenderer meshRendererOrigin = originObject.GetComponent<SkinnedMeshRenderer>();
+            SkinnedMeshRenderer meshRendererDestination = destinationObject.GetComponent<SkinnedMeshRenderer>();
+            if (meshRendererOrigin == null)
+            {
+                MelonLogger.Error($"copyModel failed Mesh: {originPath}");
+                return;
+            }
+            if (meshRendererDestination == null)
+            {
+                MelonLogger.Error($"copyModel failed Mesh: {destinationPath}");
+                return;
+            }
+            meshRendererDestination.materials = meshRendererOrigin.materials;
+            meshRendererDestination.sharedMesh = meshRendererOrigin.sharedMesh;
+        }
+        private void setParent(String parentPath, String childPath)
+        {
+            GameObject parentObject = GameObject.Find(parentPath);
+            if (parentObject != null)
+            {
+                GameObject childObject = GameObject.Find(childPath);
+                if (childObject != null)
+                {
+                    childObject.transform.SetParent(parentObject.transform);
+                }
+                else
+                {
+                    MelonLogger.Error($"setParent: Child GameObject '{childPath}' not found.");
+                }
+            }
+            else
+            {
+                MelonLogger.Error($"setParent: Parent GameObject '{parentPath}' not found.");
+            }
+        }
+
+        private void setChildActive(String parentPath, String childActivate)
+        {
+            // Find Parent
+            GameObject parentObject = GameObject.Find(parentPath);
+            if (parentObject != null)
+            {
+                // Find Child
+                Transform childTransform = parentObject.transform.Find(childActivate);
+                if (childTransform != null)
+                {
+                    // Set ChildObject Active
+                    GameObject child = childTransform.gameObject;
+                    child.SetActive(true);
+                }
+                else
+                {
+                    MelonLogger.Error($"setChildActive: Child GameObject '{childActivate}' not found within '{parentObject.name}'.");
+                }
+            }
+            else
+            {
+                MelonLogger.Error($"setChildActive: Parent GameObject '{parentPath}' not found.");
+            }
         }
 
         private void runGui()
