@@ -1,144 +1,74 @@
 ﻿using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections;
+using System.Collections.Generic;
 using MelonLoader;
 using System.IO;
 using System.Diagnostics;
 using UnityEngine.SceneManagement;
 using System;
 using UnityEngine;
+using Il2CppSystem.Threading;
 
 namespace SkinManager
 {
     internal class Costumizer: MelonMod
     {
+
         public override void OnApplicationStart()
         {
             MelonLogger.Msg("Set runInBackground to yes for Overlay...");
             UnityEngine.Application.runInBackground = true;
             MelonLogger.Msg("Loading the ModOverlay...");
             runGui();
-
         }
-        bool loaded = false;
+
+        private bool loaded = false;
+        private AsyncOperation asyncLoad;
+        private int sceneCounter = 0;
+        private string[] scenesLoading = { "DET_Detention", "RES_Residential", "EXC_Mines" };
+        private List<GameObject> modelList = new List<GameObject>();
         public override void OnUpdate()
         {
             base.OnUpdate();
-            if (!loaded)
+            Scene scene = SceneManager.GetActiveScene();
+            if (!loaded && scene.name == "MainMenu")
             {
-                //loaded = true;
+                if(asyncLoad == null)asyncLoad = SceneManager.LoadSceneAsync(scenesLoading[sceneCounter], LoadSceneMode.Additive);
             }
-            if (false)
+            if (asyncLoad != null && asyncLoad.isDone && !loaded)
             {
-                Scene scene = SceneManager.GetActiveScene();
-                MelonLogger.Msg($"Loaded {scene.name}");
-                if(scene.name == "LOV_Reeducation")
+                OnSceneLoaded(scenesLoading[sceneCounter]);
+            }
+        }
+        private void OnSceneLoaded(string sceneName)
+        {
+            Scene loadedScene = SceneManager.GetSceneByName(sceneName);
+            List<GameObject> list = new List<GameObject>();
+            if (loadedScene.IsValid())
+            {
+                MelonLogger.Msg($"Loaded Scene: {loadedScene.name}. Start loading Models.");
+                if (loadedScene.name == "DET_Detention")
                 {
-                    runGui();
+                    list = DET_DetentionModels.loadModels();
                 }
+                //else if (loadedScene.name == "RES_Residential") ;
+                //else if (loadedScene.name == "EXC_Mines") ;
             }
-
-        }
-        public static string getFullPath(GameObject gameObject)
-        {
-            string path = "/" + gameObject.name;
-            Transform current = gameObject.transform;
-            while (current.parent != null)
+            foreach(GameObject childObject in list)
             {
-                current = current.parent;
-                path = "/" + current.name + path;
+                modelList.Add(childObject);
             }
-            return path;
-        }
-
-        private GameObject copyObjectDDOL(String originPath, String newName)
-        {
-            GameObject originObject = GameObject.Find(originPath);
-            if(originObject == null)
+            SceneManager.UnloadSceneAsync(sceneName);
+            if(sceneCounter == scenesLoading.Length - 1)
             {
-                MelonLogger.Error($"Method copyObjectDDOL failed at originPath: {originPath}");
-                return null;
-            }
-            GameObject copy = GameObject.Instantiate(originObject);
-            copy.name = newName;
-            GameObject.DontDestroyOnLoad(copy);
-            return copy;
-        }
-
-        private void copyModelSMR(String originPath, String destinationPath)
-        {
-            GameObject originObject = GameObject.Find(originPath);
-            GameObject destinationObject = GameObject.Find(destinationPath);
-            if (originObject == null)
-            {
-                MelonLogger.Error($"copyModel failed at originPath: {originPath}");
+                SceneManager.LoadScene("MainMenu");
+                loaded = true;
                 return;
             }
-            if (destinationObject == null)
-            {
-                MelonLogger.Error($"copyModel failed at originPath: {destinationPath}");
-                return;
-            }
-
-            SkinnedMeshRenderer meshRendererOrigin = originObject.GetComponent<SkinnedMeshRenderer>();
-            SkinnedMeshRenderer meshRendererDestination = destinationObject.GetComponent<SkinnedMeshRenderer>();
-            if (meshRendererOrigin == null)
-            {
-                MelonLogger.Error($"copyModel failed Mesh: {originPath}");
-                return;
-            }
-            if (meshRendererDestination == null)
-            {
-                MelonLogger.Error($"copyModel failed Mesh: {destinationPath}");
-                return;
-            }
-            meshRendererDestination.materials = meshRendererOrigin.materials;
-            meshRendererDestination.sharedMesh = meshRendererOrigin.sharedMesh;
-        }
-        private void setParent(String parentPath, String childPath)
-        {
-            GameObject parentObject = GameObject.Find(parentPath);
-            if (parentObject != null)
-            {
-                GameObject childObject = GameObject.Find(childPath);
-                if (childObject != null)
-                {
-                    childObject.transform.SetParent(parentObject.transform);
-                }
-                else
-                {
-                    MelonLogger.Error($"setParent: Child GameObject '{childPath}' not found.");
-                }
-            }
-            else
-            {
-                MelonLogger.Error($"setParent: Parent GameObject '{parentPath}' not found.");
-            }
-        }
-
-        private void setChildActive(String parentPath, String childActivate)
-        {
-            // Find Parent
-            GameObject parentObject = GameObject.Find(parentPath);
-            if (parentObject != null)
-            {
-                // Find Child
-                Transform childTransform = parentObject.transform.Find(childActivate);
-                if (childTransform != null)
-                {
-                    // Set ChildObject Active
-                    GameObject child = childTransform.gameObject;
-                    child.SetActive(true);
-                }
-                else
-                {
-                    MelonLogger.Error($"setChildActive: Child GameObject '{childActivate}' not found within '{parentObject.name}'.");
-                }
-            }
-            else
-            {
-                MelonLogger.Error($"setChildActive: Parent GameObject '{parentPath}' not found.");
-            }
+            sceneCounter++;
+            asyncLoad = SceneManager.LoadSceneAsync(scenesLoading[sceneCounter], LoadSceneMode.Additive);
         }
 
         private void runGui()
@@ -199,6 +129,5 @@ namespace SkinManager
             Directory.SetCurrentDirectory(currentDirectory);
         }
     }
-
 }
     

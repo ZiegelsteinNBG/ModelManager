@@ -68,8 +68,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\ModOverlayGUI\ModDataManager.cs">
+      <Link>ModDataManager.cs</Link>
+    </Compile>
     <Compile Include="Costumizer.cs" />
-    <Compile Include="ModDataManager.cs" />
+    <Compile Include="DET_DetentionModels.cs" />
+    <Compile Include="HelperMethodsCM.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
