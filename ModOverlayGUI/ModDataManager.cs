@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
@@ -33,8 +34,7 @@ namespace ModOverlayGUI
             {
                 if (!File.Exists(FilePath))
                 {
-                    ModData modData = new ModData();
-                    modData.init = true;
+                    ModData modData = iniModData();
                     return modData; // Return default settings if file doesn't exist
                 }
 
@@ -47,13 +47,12 @@ namespace ModOverlayGUI
             catch (Exception ex)
             {
                 Console.WriteLine("Error loading settings: " + ex.Message);
-                ModData modData = new ModData();
-                modData.init = true;
+                ModData modData = iniModData();
                 return modData; // Return default settings in case of error
             }
         }
 
-        public ModData iniModData()
+        public static ModData iniModData()
         {
             ModData modData = new ModData();
             // Init
@@ -61,6 +60,27 @@ namespace ModOverlayGUI
             // Playermodel
             modData.playerModelSize = 1.0f;
             List<ModelData> models = new List<ModelData>();
+
+            // Elster Models
+            String[] modelParts_ELNormal = { "Hat", "Body", "Hair", "Tasche", "HairHead"};
+            ModelData normal = new ModelData("Normal", modelParts_ELNormal, new bool[modelParts_ELNormal.Length]);
+            models.Add(normal);
+
+            String[] modelParts_ELArmor = { "Body", "Hair", "HairHead", "Armor", "TascheArmor" };
+            ModelData armored = new ModelData("Armored", modelParts_ELArmor, new bool[modelParts_ELArmor.Length]);
+            models.Add(armored);
+
+            String[] modelParts_ELEVA = { "Body", "Helmet", "Neck", "Backpack", "TascheArmor", "Visor", "Visor Layer2"};
+            ModelData eva = new ModelData("EVA", modelParts_ELEVA, new bool[modelParts_ELEVA.Length]);
+            models.Add(eva);
+
+            String[] modelParts_ELCrippled = { "Body", "Organs", "Hair", "HairHead"};
+            ModelData crippled = new ModelData("Crippled",modelParts_ELCrippled, new bool[modelParts_ELCrippled.Length]);
+            models.Add(crippled);
+
+            String[] modelParts_IsaPast = { "Body", "Hair", "HairHead", "Skirt", "Braid"};
+            ModelData isa_Past = new ModelData("Isa_Past", modelParts_IsaPast, new bool[modelParts_IsaPast.Length]);
+            models.Add(isa_Past);
 
             // DET_Detention
             String[] modelParts_isaHurt = { "Body", "Braid", "Hair_Isa", "HairHead_Isa", "IsaBodyDetailsArmor", "Isas_Knife",  "Skirt_Short", "Tasche" }; 
