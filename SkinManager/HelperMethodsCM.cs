@@ -84,6 +84,26 @@ namespace SkinManager
             }
         }
 
+        public static void setParent(String parentPath, GameObject child)
+        {
+            GameObject parentObject = GameObject.Find(parentPath);
+            if (parentObject != null)
+            {
+                if (child != null)
+                {
+                    child.transform.SetParent(parentObject.transform);
+                }
+                else
+                {
+                    MelonLogger.Error($"setParent: Child GameObject '{child}' not found.");
+                }
+            }
+            else
+            {
+                MelonLogger.Error($"setParent: Parent GameObject '{parentPath}' not found.");
+            }
+        }
+
         public static bool setChildActive(String parentPath, String childActivate)
         {
             // Find Parent
