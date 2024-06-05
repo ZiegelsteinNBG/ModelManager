@@ -9,40 +9,61 @@ using System.Diagnostics;
 using UnityEngine.SceneManagement;
 using System;
 using UnityEngine;
-using Il2CppSystem.Threading;
+using HarmonyLib;
+using TMPro;
+using ModOverlayGUI;
 
 namespace SkinManager
 {
     internal class Costumizer: MelonMod
     {
-
+        private static bool loaded = false;
+        private static AsyncOperation asyncLoad;
+        private static int sceneCounter = 0;
+        private static string[] scenesLoading = { "DET_Detention", "RES_Residential", "EXC_Mines" };
+        private static List<GameObject> modelList = new List<GameObject>();
+        private static bool activeHook = false;
+        private static bool finishedLoading = false;
+        private static Scene hookScene;
+        private static ModData modData;
+        
         public override void OnApplicationStart()
         {
             MelonLogger.Msg("Set runInBackground to yes for Overlay...");
             UnityEngine.Application.runInBackground = true;
             MelonLogger.Msg("Loading the ModOverlay...");
+            modData = ModDataManager.LoadModData();
+            ModDataManager.SaveModData(modData);
             runGui();
         }
 
-        private bool loaded = false;
-        private AsyncOperation asyncLoad;
-        private int sceneCounter = 0;
-        private string[] scenesLoading = { "DET_Detention", "RES_Residential", "EXC_Mines" };
-        private List<GameObject> modelList = new List<GameObject>();
         public override void OnUpdate()
         {
             base.OnUpdate();
             Scene scene = SceneManager.GetActiveScene();
             if (!loaded && scene.name == "MainMenu")
             {
-                if(asyncLoad == null)asyncLoad = SceneManager.LoadSceneAsync(scenesLoading[sceneCounter], LoadSceneMode.Additive);
+                if (asyncLoad == null)
+                {
+                    ShowLoadingScreen();
+                    asyncLoad = SceneManager.LoadSceneAsync(scenesLoading[sceneCounter], LoadSceneMode.Additive);
+
+                }
             }
             if (asyncLoad != null && asyncLoad.isDone && !loaded)
             {
                 OnSceneLoaded(scenesLoading[sceneCounter]);
             }
+            else if(loaded && asyncLoad.isDone && !finishedLoading)
+            {
+                Thread.Sleep(1000);
+                finishedLoading = true;
+                activeHook = true;
+                HideLoadingScreen();
+                MelonLogger.Msg("Done Loading Models: " + activeHook);
+            }
         }
-        private void OnSceneLoaded(string sceneName)
+        private static void OnSceneLoaded(string sceneName)
         {
             Scene loadedScene = SceneManager.GetSceneByName(sceneName);
             List<GameObject> list = new List<GameObject>();
@@ -63,7 +84,7 @@ namespace SkinManager
             SceneManager.UnloadSceneAsync(sceneName);
             if(sceneCounter == scenesLoading.Length - 1)
             {
-                SceneManager.LoadScene("MainMenu");
+                asyncLoad = SceneManager.LoadSceneAsync("MainMenu");
                 loaded = true;
                 return;
             }
@@ -71,7 +92,21 @@ namespace SkinManager
             asyncLoad = SceneManager.LoadSceneAsync(scenesLoading[sceneCounter], LoadSceneMode.Additive);
         }
 
-        private void runGui()
+        // Lazy solution, but at this point I hate this project
+        private static void ShowLoadingScreen( )
+        {
+            HelperMethodsCM.setChildActive("UI", "BookCanvas");
+            GameObject.Find("Page Indicator").SetActive(false);
+            TextMeshProUGUI textMesh = GameObject.Find("Book Content").GetComponent<TextMeshProUGUI>();
+            textMesh.m_text = "ModelManager\r\nPreparing models by cycling through scenes, please be patient...";
+        }
+
+        private static void HideLoadingScreen()
+        {
+            GameObject.Find("UI/BookCanvas").SetActive(false);
+        }
+
+        private static void runGui()
         {
             // Current directory of the game
             string currentDirectory = System.Environment.CurrentDirectory;
@@ -127,6 +162,41 @@ namespace SkinManager
             }
             // Reset the directory
             Directory.SetCurrentDirectory(currentDirectory);
+        }
+
+        private static void setModels(bool hook)
+        {
+            HashSet<string> sceneNames = new HashSet<string> { "PEN_Wreck", "PEN_Hole", "LOV_Reeducation", "DET_Detention", "MED_Medical", "RES_School", "RES_Residential", "EXC_Mines", "LAB_Labyrinth", "MEM_Memory", "BIO_Reeducation", "ROT_Rotfront", "BOS_Adler" };
+            Scene currScene = SceneManager.GetActiveScene();
+            if (sceneNames.Contains(currScene.name))
+            {
+                if (!hook)
+                {
+
+                }
+                else if(hookScene != null || !(hookScene.name == currScene.name))
+                {
+                    MelonLogger.Msg("setModels by Hook");
+                    hookScene = currScene;
+                    DET_DetentionModels.insertModels();
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerState.newSceneLoaded), "Invoke")]
+        public class Hook
+        {
+            public static void Postfix(PlayerState.newSceneLoaded __instance)
+            {
+                try
+                {
+                    //Costumizer.setModels(true);
+                }
+                catch (System.Exception ex)
+                {
+                    MelonLogger.Error($"Exception in patch of void PlayerState.newSceneLoaded::Invoke():\n{ex}");
+                }
+            }
         }
     }
 }
