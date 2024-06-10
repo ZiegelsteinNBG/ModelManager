@@ -2,19 +2,19 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using MelonLoader;
-using SkinManager;
+using ModelManager;
 
-[assembly: MelonInfo(typeof(Costumizer), "CustomizationManager", "0.1", "Ziegelstein")]
+[assembly: MelonInfo(typeof(Costumizer), "ModelManager", "1.0", "Ziegelstein")]
 [assembly: MelonGame("", "")]
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("SkinManager")]
+[assembly: AssemblyTitle("ModelManager")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("SkinManager")]
+[assembly: AssemblyProduct("ModelManager")]
 [assembly: AssemblyCopyright("Copyright ©  2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\SkinManager\ModDataManager.cs" Link="ModDataManager.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ClickableTransparentOverlay" Version="6.2.1" />
     <PackageReference Include="ImGui.NET" Version="1.89.7.1" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.0.1" />
