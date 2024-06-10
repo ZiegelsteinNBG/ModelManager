@@ -5,54 +5,100 @@ using System.Numerics;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System;
-
+using ModOverlayGUI;
+using System.Security.AccessControl;
 
 namespace ModGUI
 {
     public class ProgramGUI : Overlay
     {
         static String gameName = "Signalis";
-        bool showGui = true;
-        bool debugMod = true;
-        bool help = true;
+        private bool showGui = true;
+        private bool debugMod = false;
+        private bool help = true;
 
-        bool dynamicHolster = false;
-        bool[] showWeapon = { false,false,false,false};
+        private float weaponSize;
+        private bool dynamicHolster;
+        private string[] weaponName;
+        private bool[] showWeapon;
 
-        int elsterNormal = 0;
-        String[] elsterString = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
-        float playerSize = 1;
-        float weaponSize = 1;
+        private int idModel;
+        private String[] elsterString;
+        private float playerSize;
+        private bool[] active;
+        private float height;
 
-        bool auto_deselect = false;
-        string input_str = "";
-        string input_str2 = "";
+        private ModData modData = new ModData();
         [DllImport("user32.dll")]
         static extern short GetAsyncKeyState(int key);
+
         public ProgramGUI()
         {
-            // Initialization code for ImGui (if necessary)
+            // Initialization code for ImGui
             ImGui.CreateContext();
             ImGui.GetIO().Fonts.AddFontDefault();
+            modData = ModDataManager.LoadModData();
+            if (modData != null)
+            {
+                elsterString = new string[modData.modelData.Count];
+                for (int i = 0; i < modData.modelData.Count; i++)
+                {
+                    elsterString[i] = modData.modelData[i].modelName;
+                }
+                weaponName = modData.weaponName;
+                loadData();
+            }
+            modData.windowed = showGui;
+            ModDataManager.SaveModData(modData);
+        }
+
+        private void loadData()
+        {
+            if(modData != null)
+            {
+                dynamicHolster = modData.weaponShowCase;
+                showWeapon = modData.weaponBool;
+                playerSize = modData.playerModelSize;
+                weaponSize = modData.weaponModelSize;
+                height = modData.localHeight;
+            }
+        }
+
+        private void writeData()
+        {
+            if (modData != null)
+            {
+                modData.weaponShowCase = dynamicHolster;
+                showWeapon = modData.weaponBool;
+                modData.playerModelSize = playerSize;
+                modData.weaponModelSize = weaponSize;
+                modData.localHeight = height;
+            }
+            modData.call++;
+            ModDataManager.SaveModData(modData);
         }
         protected override void Render()
         {
             if (Process.GetProcessesByName(gameName).Length == 0 && !debugMod) Close();
-
+            
             if (GetAsyncKeyState(0x76) < 0)
             {
                 showGui = !showGui;
+                modData.windowed = showGui;
+                modData.call++;
+                ModDataManager.SaveModData(modData);
                 Thread.Sleep(150);
             }
+            
             if (showGui) {
-                ImGui.Begin("ModelManager",ImGuiWindowFlags.MenuBar);
+                ImGui.Begin("ModelManager",ImGuiWindowFlags.MenuBar );
 
-                ImGui.ShowDemoWindow();
+                //ImGui.ShowDemoWindow();
                 if (!help)
                 {
                     if (ImGui.Button("Apply Changes"))
                     {
-
+                        writeData();
                     }
                 }
 
@@ -60,29 +106,39 @@ namespace ModGUI
                 {
                     ImGui.NewLine();
  
-                    
                     if (ImGui.BeginTabItem("Help"))
                     {
                         help = true;
-                        ImGui.Text("\nThank you for using my mod :D\n" +
-                            "F7 to toggle the Overlay on and off\n" +
-                            "By pressing [Apply Changes] the current changes should be applied into the game \n" +
-                            "and the changes be saved into a XML file");
+                        ImGui.Text("\nWhile this GUI is open, the game will be windowed to prevent it from \nbeing minimized while interacting with the GUI.\n\nPress F7 to toggle the overlay on and off.\n" +
+                                   "By pressing [Apply Changes], the current changes will be applied to the game\n" +
+                                   "and the changes will be saved to an XML file.\n\n" +
+                                   "For suggestions/ bug report please make a post on Nexusmods\nor contact me on Discord [ziegelstein]");
                         ImGui.EndTabItem();
                     }
 
-                    
                     if (ImGui.BeginTabItem("Player Model"))
                     {
                         help = false;
                         ImGui.Text("\n");
-                        ImGui.SeparatorText("Model Size");
-                        ImGui.InputFloat("", ref playerSize, 0.01f, 1.0f, "%.3f");
+                        ImGui.SeparatorText("Local Height Position");
+                        if (ImGui.InputFloat("Height [-1.5|+1.5]", ref height, 0.01f, 1.0f, "%.3f"))
+                        {
+                            if (height < -1.5) height = -1.5f;
+                            if (height > 1.5f) height = 1.5f;
+                        }
 
-                        ImGui.Text("NOTICE: Player size Model will affect gameplay\n -> bigger/ smaller hitbox will hit obstacles p.e.\n ");
+                        ImGui.Text("NOTICE: User needs to adjust height manually\n -> Intended for models like KLBR, STRC and STAR.\n");
+                        ImGui.SeparatorText("Model Size");
+                        if(ImGui.InputFloat("Size [0.25|3.0]", ref playerSize, 0.01f, 1.0f, "%.3f"))
+                        {
+                            if(playerSize < 0.25)playerSize = 0.25f;
+                            if (playerSize > 3.0f) playerSize = 3.0f;
+                        }
+
+                        ImGui.Text("NOTICE: Player size model will affect gameplay\n -> Larger or smaller hitboxes will affect obstacle collisions.\n");
                         ImGui.SeparatorText("Model Parts");
-                        ImGui.ListBox($" ", ref elsterNormal, elsterString, elsterString.Length);//To Do BeginListBox
-                        modelMenu();
+                        ImGui.ListBox($" ", ref idModel, elsterString, elsterString.Length);
+                        modelMenu(idModel);
                         ImGui.EndTabItem();
                     }
 
@@ -91,40 +147,44 @@ namespace ModGUI
                         help = false;
                         ImGui.Text("\n");
                         ImGui.SeparatorText("Weapon Size");
-                        ImGui.SliderFloat("", ref weaponSize, 0.1f, 5f);
-                        ImGui.Text("NOTICE: Weapon size model will affect gameplay\n -> bigger will be harder to aim, the more closer the enemy are\n ");
-                        ImGui.Separator();
-                        if (debugMod) { ImGui.Checkbox("Dynamic / Manual Mode", ref dynamicHolster); }
-                        ImGui.Text("Dynamic: Checks which Weapons are in the Inventory/ is equipped \nManual: Customize manually which Weapon should be shown");
+                        if (ImGui.InputFloat("Size [0.25|3.0]", ref weaponSize, 0.01f, 1.0f, "%.3f"))
+                        {
+                            if (weaponSize < 0.25) weaponSize = 0.25f;
+                            if (weaponSize > 3.0f) weaponSize = 3.0f;
+                        }
+                        ImGui.Text("NOTICE: Weapon size model will affect gameplay\n -> Larger weapons will be harder to aim, especially when enemies are closer.\n");
+                        ImGui.SeparatorText("Visible Equip");
+                        ImGui.Checkbox("Dynamic / Manual Mode", ref dynamicHolster);
+                        if (dynamicHolster)
+                        {
+                            showWeapon = new bool[showWeapon.Length];
+                        }
+                        ImGui.Text("Dynamic: Checks which weapons are in the inventory or equipped.\nManual: Customize manually which weapon should be shown.");
                         ImGui.Separator();
                         ImGui.BeginDisabled(dynamicHolster);
                         ImGui.Text("\nManual Selection");
-                        ImGui.Checkbox("Pistol Hip", ref showWeapon[0]);
-                        ImGui.SameLine();
-                        ImGui.Checkbox("Machete Hip", ref showWeapon[1]);
-                        ImGui.Checkbox("Rifle Back", ref showWeapon[2]);
-                        ImGui.Checkbox("Shotgun Hip", ref showWeapon[3]);
+                        for (int i = 0; i < showWeapon.Length; i++)
+                        {
+                            ImGui.Checkbox(weaponName[i], ref showWeapon[i]);
+                        }
                         ImGui.EndDisabled();
                         ImGui.EndTabItem();
                     }
                     ImGui.EndTabBar();
                 }
-
                 ImGui.End();
             }
         }
-
-        public void modelMenu()
+  
+        private void modelMenu(int id)
         {
-            //To Do
-            ImGui.SameLine();
-            ImGui.BeginGroup();
-            ImGui.Checkbox("Pistol Hip", ref showWeapon[0]);
-            ImGui.SameLine();
-            ImGui.Checkbox("Machete Hip", ref showWeapon[1]);
-            ImGui.Checkbox("Rifle Back", ref showWeapon[2]);
-            ImGui.Checkbox("Shotgun Hip", ref showWeapon[3]);
-            ImGui.EndGroup();   
+            ModelData model = modData.modelData[id];
+            active = modData.modelData[id].active;
+            for (int i = 0; i < model.modelParts.Length; i++)
+            {
+                ImGui.Checkbox(model.modelParts[i], ref active[i]);
+            }
+            modData.modelData[id].active = active;
         }
 
         public static void Main(string[] args)
@@ -144,7 +204,3 @@ namespace ModGUI
         }
     }
 }
-
-
-
-

@@ -5,65 +5,79 @@ using System.Text;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
-
 namespace ModOverlayGUI
 {
     public class ModDataManager
     {
         private static string FilePath = "CMData.xml";
+        private static readonly object lockObject = new object();
 
         public static void SaveModData(ModData modData)
         {
-            try
+            lock (lockObject)
             {
-                XmlSerializer serializer = new XmlSerializer(typeof(ModData));
-                using (StreamWriter writer = new StreamWriter(FilePath))
+                try
                 {
-                    serializer.Serialize(writer, modData);
+                    XmlSerializer serializer = new XmlSerializer(typeof(ModData));
+                    using (FileStream fs = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                    {
+                        serializer.Serialize(fs, modData);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error saving data: " + ex.Message);
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error saving data: " + ex.Message);
+                }
             }
         }
 
         public static ModData LoadModData()
         {
-            try
+            lock (lockObject)
             {
-                if (!File.Exists(FilePath))
+                try
                 {
-                    ModData modData = iniModData();
-                    return modData; // Return default settings if file doesn't exist
-                }
+                    if (!File.Exists(FilePath))
+                    {
+                        ModData modData = iniModData();
+                        return modData; // Return default settings if file doesn't exist
+                    }
 
-                XmlSerializer serializer = new XmlSerializer(typeof(ModData));
-                using (StreamReader reader = new StreamReader(FilePath))
-                {
-                    return (ModData)serializer.Deserialize(reader);
+                    XmlSerializer serializer = new XmlSerializer(typeof(ModData));
+                    using (FileStream fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        return (ModData)serializer.Deserialize(fs);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error loading settings: " + ex.Message);
-                ModData modData = iniModData();
-                return modData; // Return default settings in case of error
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error loading settings: " + ex.Message);
+                    return null; // Return default settings in case of error
+                }
             }
         }
-
+       
         public static ModData iniModData()
         {
             ModData modData = new ModData
             {
-                init = false,
+                version = 1,
+                call = 0,
                 playerModelSize = 1.0f,
-                modelData = new List<ModelData>()
-            };
+                modelData = new List<ModelData>(),
+                localHeight = 0,
 
-            // Elster Models
+                // WeaponModels
+                weaponModelSize = 1.0f,
+                weaponShowCase = false,
+                weaponName = new string[] { "Nitro Model", "FGun Model", "Shotgun", "Revolver Model", "Pistol", "Machete" },
+                windowed = false,
+            };
+            modData.weaponBool = new bool[modData.weaponName.Length];
+
+            // Elster Models (0-4)
             String[] modelParts_ELNormal = { "Hat", "Body", "Hair", "Tasche", "HairHead"};
-            modData.modelData.Add(new ModelData("Normal", modelParts_ELNormal, new bool[modelParts_ELNormal.Length]));
+            modData.modelData.Add(new ModelData("Normal", modelParts_ELNormal, new bool[] { true, true, true, true, true}));
 
             String[] modelParts_ELArmor = { "Body", "Hair", "HairHead", "Armor", "TascheArmor" };
             modData.modelData.Add(new ModelData("Armored", modelParts_ELArmor, new bool[modelParts_ELArmor.Length]));
@@ -77,11 +91,11 @@ namespace ModOverlayGUI
             String[] modelParts_IsaPast = { "Body", "Hair", "HairHead", "Skirt", "Braid"};
             modData.modelData.Add(new ModelData("Isa_Past", modelParts_IsaPast, new bool[modelParts_IsaPast.Length]));
 
-            // DET_Detention
-            String[] modelParts_isaHurt = { "Body", "Braid", "Hair_Isa", "HairHead_Isa", "IsaBodyDetailsArmor", "Isas_Knife",  "Skirt_Short", "Tasche" };
-            modData.modelData.Add(new ModelData("isa_metarig_hurt", modelParts_isaHurt, new bool[modelParts_isaHurt.Length]));
+            // DET_Detention (5-10)-1
+            String[] modelParts_isa_metarig_IK = { "Body", "Poncho", "Hair_Isa", "HairHead_Isa", "Braid" };
+            modData.modelData.Add(new ModelData("isa_metarig_IK", modelParts_isa_metarig_IK, new bool[modelParts_isa_metarig_IK.Length]));
 
-            String[] modelParts_arianeGhost = { "Body", "Hair_Ariane", "HairHead_Ariane", "HairLong ", "Skirt" };
+            String[] modelParts_arianeGhost = { "Body", "Hair_Ariane", "HairHead_Ariane", "HairLong", "Skirt" };
             modData.modelData.Add(new ModelData("ariane_metarig_IK_ghost", modelParts_arianeGhost, new bool[modelParts_arianeGhost.Length]));
 
             String[] modelParts_arianeUniform = { "Body", "Hair_Ariane", "HairHead_Ariane", "Tasche" };
@@ -91,32 +105,28 @@ namespace ModOverlayGUI
             modData.modelData.Add(new ModelData("alina_metarig_IK", modelParts_alina, new bool[modelParts_alina.Length]));
 
             String[] modelParts_isaRe = { "Body", "Braid", "Hair_Isa", "HairHead_Isa", "Isas_Knife", "Skirt_Short", "Tasche" };
-            modData.modelData.Add(new ModelData("isa_re_metarig_IK Variant", modelParts_isaRe, new bool[modelParts_isaRe.Length]));
+            //modData.modelData.Add(new ModelData("isa_re_metarig_IK Variant", modelParts_isaRe, new bool[modelParts_isaRe.Length])); Doesn't work for some reason, ignore that for now
 
             String[] modelParts_STCR = { "STCR_Baton", "STCR_Belt", "STCR_Body", "STCR_Hair", "STCR_HairHead" };
             modData.modelData.Add(new ModelData("STCR_Normal_Anim", modelParts_STCR, new bool[modelParts_STCR.Length]));
 
-            // RES_Residential
+            // RES_Residential (11-13)-1
             String[] modelParts_adler = { "Body", "Hair_Adler" };
             modData.modelData.Add(new ModelData("adler_metarig_IK", modelParts_adler, new bool[modelParts_adler.Length]));
 
-            String[] modelParts_ARAR = { "ARAR_Hair", "ARAR_HairHead", "ARAR_NomalBody", "Amigasa" };
+            String[] modelParts_ARAR = { "ARAR_Hair", "ARAR_HairHead", "ARAR_NormalBody", "Amigasa" };
             modData.modelData.Add(new ModelData("ARAR_Normal", modelParts_ARAR, new bool[modelParts_ARAR.Length]));
 
             String[] modelParts_KLBR = { "KLBR_Armor", "KLBR_Belt", "KLBR_Hair", "KLBR_HairHead", "KLBR_Normal_Body" };
             modData.modelData.Add(new ModelData("KLBR_Normal_Anim", modelParts_KLBR, new bool[modelParts_KLBR.Length]));
 
-            // EXC_Mines
+            // EXC_Mines (14-15)-1
             String[] modelParts_STAR = { "STAR_Hair", "STAR_HairHead", "STARBaton_001", "STARBody_001" };
             modData.modelData.Add(new ModelData("STAR_Normal_Anim", modelParts_STAR, new bool[modelParts_STAR.Length]));
 
             String[] modelParts_EULR = { "EULR_Hair", "EULR_HairHead", "EULR_Normal_Body", "FemaleMilitaryHat_001" };
             modData.modelData.Add(new ModelData("EULR_Normal_Anim", modelParts_EULR, new bool[modelParts_EULR.Length]));
 
-            // WeaponModels
-            modData.weaponModelSize = 1.0f;
-            modData.weaponShowCase = false;
-            modData.weaponBool = new bool[7];
             return modData;
         }
     }
@@ -144,13 +154,16 @@ namespace ModOverlayGUI
     [Serializable]
     public class ModData
     {
+        public int version { get; set; }
         // Init
-        public bool init {  get; set; }
+        public int call {  get; set; }
         // PLayModel
         public float playerModelSize { get; set; }
 
         public List<ModelData> modelData { get; set; }
+        public float localHeight { get; set; }
 
+        public bool windowed { get; set; }
         public ModelData FindModelDataByName(string modelName)
         {
             return modelData.FirstOrDefault(md => md.modelName == modelName);
@@ -158,8 +171,8 @@ namespace ModOverlayGUI
 
         // WeaponModels
         public float weaponModelSize { get; set; }
+        public string[] weaponName { get; set; }
         public bool weaponShowCase { get; set; }
         public bool[] weaponBool { get; set; }
     }
 }
- 

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace SkinManager
+namespace ModelManager
 {
     public class HelperMethodsCM
     {
@@ -37,12 +37,11 @@ namespace SkinManager
             return copy;
         }
 
-        public static bool copyModelSMR(String originPath, GameObject destinationObject)
-        {
-            GameObject originObject = GameObject.Find(originPath);
+        public static bool copyModelSMR(GameObject originObject, GameObject destinationObject)
+        { 
             if (originObject == null)
             {
-                MelonLogger.Error($"copyModel failed at originPath: {originPath}");
+                MelonLogger.Error($"copyModel failed with OriginObject: {originObject}");
                 return false;
             }
             if( destinationObject == null)return false;
@@ -51,7 +50,7 @@ namespace SkinManager
             SkinnedMeshRenderer meshRendererDestination = destinationObject.GetComponent<SkinnedMeshRenderer>();
             if (meshRendererOrigin == null)
             {
-                MelonLogger.Error($"copyModel failed Mesh: {originPath}");
+                MelonLogger.Error($"copyModel failed Mesh: {originObject}");
                 return false;
             }
             if (meshRendererDestination == null)
@@ -104,7 +103,26 @@ namespace SkinManager
             }
         }
 
-        public static bool setChildActive(String parentPath, String childActivate)
+        public static void setParent(GameObject parentObject, GameObject child)
+        {
+            if (parentObject != null)
+            {
+                if (child != null)
+                {
+                    child.transform.SetParent(parentObject.transform);
+                }
+                else
+                {
+                    MelonLogger.Error($"setParent: Child GameObject '{child}' not found.");
+                }
+            }
+            else
+            {
+                MelonLogger.Error($"setParent: Parent GameObject '{parentObject}' not found.");
+            }
+        }
+
+        public static bool setChildActive(String parentPath, String childActivate, bool active)
         {
             // Find Parent
             GameObject parentObject = GameObject.Find(parentPath);
@@ -116,7 +134,7 @@ namespace SkinManager
                 {
                     // Set ChildObject Active
                     GameObject child = childTransform.gameObject;
-                    child.SetActive(true);
+                    child.SetActive(active);
                     return true;
                 }
                 else
