@@ -1,11 +1,13 @@
 ﻿using MelonLoader;
 using ModOverlayGUI;
+using RootMotion.FinalIK;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static RootMotion.Demos.Turret;
 
 namespace ModelManager
 {
@@ -13,21 +15,30 @@ namespace ModelManager
     {
         static List<GameObject> models = new List<GameObject>();
         static List<GameObject> activeModels = new List<GameObject>();
+
+        static Dictionary<String, int> dict_klbr = new Dictionary<String, int>();
+        static GameObject klbr_root;
+        static SkinnedMeshRenderer klbr_skin;
         public static List<GameObject> loadModels()
         {
+            // ADLR
             HelperMethodsCM.setChildActive("Cutscenes/", "Isa Adler Meeting", true);
             HelperMethodsCM.setChildActive("Cutscenes/Isa Adler Meeting/", "RES_Isa_1", true);
             GameObject adlr = HelperMethodsCM.copyObjectDDOL("Cutscenes/Isa Adler Meeting/RES_Isa_1/CharSpace/adler_metarig_IK", "adler_metarig_IK", true);
             adlr.SetActive(false);
             models.Add(adlr);
 
+            //ARAR
             HelperMethodsCM.setChildActive("Service Tunnel/", "Chunk", true);
             GameObject arar = HelperMethodsCM.copyObjectDDOL("Service Tunnel/Chunk/Please stop decompiling our game, it's very disrespectful./ARAR-S2318/ARAR_Normal", "ARAR_Normal", true);
             arar.SetActive(false);
             models.Add(arar);
 
+            //KLBR
             HelperMethodsCM.setChildActive("Library/", "Chunk", true);
             GameObject klbr = HelperMethodsCM.copyObjectDDOL("Library/Chunk/KLBR-S2302/KLBR_Normal_Anim", "KLBR_Normal_Anim", true);
+            klbr_skin = HelperMethodsCM.destroyAndSkin(klbr, "KLBR_Normal_Body");
+            dict_klbr = HelperMethodsCM.dictList(klbr_skin);
             klbr.SetActive(false);
             models.Add(klbr);
 
@@ -57,7 +68,16 @@ namespace ModelManager
                 }
             }
         }
+        public static void updatePose(ModData data) {
+            if(klbr_skin == null)return;
+            if (data.FindModelDataByName("KLBR_Normal_Anim").active[4])
+            {
+                SkinnedMeshRenderer defaultSkin = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/Normal/Body").GetComponent<SkinnedMeshRenderer>();
+                HelperMethodsCM.updatePose(defaultSkin, klbr_skin, dict_klbr);
+            }
 
+            //TODO Height Weapons etc
+        }
         public static void insertModels(ModData data)
         {
             activeModels = new List<GameObject>();
@@ -65,8 +85,19 @@ namespace ModelManager
             GameObject basicCopy = HelperMethodsCM.copyObjectDDOL("__Prerequisites__/Character Origin/Character Root/Ellie_Default/Normal/Body", "basicCopy", false);
             foreach (GameObject model in models)
             {
+                //Clean Up
+                GameObject existing = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{model.name}");
+                if(existing!=null)GameObject.Destroy(existing);
+
                 ModelData currModel = data.FindModelDataByName(model.name);
                 MelonLogger.Msg(model.name);
+                //KLBR CASE 
+                if (model.name == "KLBR_Normal_Anim")
+                {
+                    klbr_skin = HelperMethodsCM.insertAlternative(model, "KLBR_Normal_Anim", "KLBR", "KLBR_Normal_Body", "KLBR_Normal", dict_klbr);
+                    activeModels.Add(GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/KLBR_Normal_Anim/"));
+                    continue;
+                }
                 GameObject modelCopy = new GameObject();
                 modelCopy.name = model.name;
                 HelperMethodsCM.setParent("__Prerequisites__/Character Origin/Character Root/Ellie_Default", modelCopy);

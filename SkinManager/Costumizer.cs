@@ -9,11 +9,14 @@ using System.Diagnostics;
 using UnityEngine.SceneManagement;
 using System;
 using UnityEngine;
+using System.Reflection;
 using HarmonyLib;
 using TMPro;
 using ModOverlayGUI;
 using UnityEditor;
 using System.Runtime.InteropServices;
+using Debug = UnityEngine.Debug;
+
 
 
 namespace ModelManager
@@ -23,7 +26,7 @@ namespace ModelManager
         private static bool loaded = false;
         private static AsyncOperation asyncLoad;
         private static int sceneCounter = 0;
-        private static string[] scenesLoading = { "DET_Detention", "RES_Residential", "EXC_Mines" };
+        private static string[] scenesLoading = { "DET_Detention", "RES_Residential", "EXC_Mines", "BOS_Adler" };
         private static List<GameObject> modelList = new List<GameObject>();
         private static bool activeHook = false;
         private static bool finishedLoading = false;
@@ -39,6 +42,10 @@ namespace ModelManager
         private static bool guiLoaded = false;
         private static Resolution currentResolution;
 
+        private static bool retryInsert;
+        private static bool retryMissing;
+
+        
         public override void OnApplicationStart()
         {
             currentDirectory = System.Environment.CurrentDirectory;
@@ -50,8 +57,8 @@ namespace ModelManager
                 version = modData.call;
             }
             Directory.SetCurrentDirectory(currentDirectory);
+            
         }
-
 
         public override void OnUpdate()
         {
@@ -59,6 +66,11 @@ namespace ModelManager
             Directory.SetCurrentDirectory(targetDirectory);
             modData = ModDataManager.LoadModData();
             Directory.SetCurrentDirectory(currentDirectory);
+            if(modData == null)
+            {
+                MelonLogger.Msg("Retry loading XML...");
+                return;
+            }
             if(!guiLoaded)modData.windowed = false;
             else if (version < modData.call)
             {
@@ -98,19 +110,26 @@ namespace ModelManager
                     screeenState();
                     runGui();
                 }
-                if (hookScene.name != SceneManager.GetActiveScene().name) setModels(true);
-                if (GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/isa_metarig_IK") == null) setModels(true);
+                if (retryInsert)
+                {
+                    retryInsert = false;
+                    setModels(retryMissing);
+                }
+                if (GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{modData.modelData[modData.modelData.Count-1].modelName}") == null) setModels(true);
                 Ellie_DefaultModels.updateModels(modData, true);
+                updatePose();
+
                 if (version < modData.call)
                 {
                     setModels(false);
                     version = modData.call;
                 }
-                if (modData.weaponShowCase)Ellie_DefaultModels.updateWeaponModelsDynamic();
+                // TODO ManualUpdate New modData
+                if (modData.weaponShowCase) Ellie_DefaultModels.updateWeaponModelsDynamic();
+                else Ellie_DefaultModels.updateWeaponModelsManual(modData);
                 
             }
         }
-
         
         private static void screeenState()
         {
@@ -139,6 +158,7 @@ namespace ModelManager
                 if (loadedScene.name == "DET_Detention") list = DET_DetentionModels.loadModels();
                 else if (loadedScene.name == "RES_Residential") list = RES_ResidentialModels.loadModels();
                 else if (loadedScene.name == "EXC_Mines") list = EXC_MinesModels.loadModels();
+                else if(loadedScene.name == "BOS_Adler") list   = BOS_AdlerModels.loadModels();
             }
             foreach(GameObject childObject in list)
             {
@@ -232,26 +252,41 @@ namespace ModelManager
             Scene currScene = SceneManager.GetActiveScene();
             return sceneNames.Contains(currScene.name);
         }
-
+        private static void updatePose()
+        {
+            RES_ResidentialModels.updatePose(modData);
+            EXC_MinesModels.updatePose(modData);
+            BOS_AdlerModels.updatePose(modData);
+        }
         private static void setModels(bool missing)
         {
-            Scene currScene = SceneManager.GetActiveScene();
-            if (GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default") != null)
+            try
             {
-                if(hookScene == null || !(hookScene.name == currScene.name))
+                Scene currScene = SceneManager.GetActiveScene();
+                if (GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default") != null)
                 {
-                    MelonLogger.Msg("Hook: new scene detected, insert models");
-                    hookScene = currScene;
-                    DET_DetentionModels.insertModels(modData);
-                    RES_ResidentialModels.insertModels(modData);
-                    EXC_MinesModels.insertModels(modData);
-                    Ellie_DefaultModels.localHeight = 0.0f;
+                    if (hookScene == null || !(hookScene.name == currScene.name))
+                    {
+                        MelonLogger.Msg("Hook: new scene detected, insert models");
+                        hookScene = currScene;
+                        DET_DetentionModels.insertModels(modData);
+                        RES_ResidentialModels.insertModels(modData);
+                        EXC_MinesModels.insertModels(modData);
+                        BOS_AdlerModels.insertModels();
+                        Ellie_DefaultModels.localHeight = 0.0f;
+                    }
+                    Ellie_DefaultModels.updateModels(modData, true);
+                    RES_ResidentialModels.updateModels(modData);
+                    DET_DetentionModels.updateModels(modData);
+                    EXC_MinesModels.updateModels(modData);
+                    if (!modData.weaponShowCase) Ellie_DefaultModels.updateWeaponModelsManual(modData);
                 }
-                Ellie_DefaultModels.updateModels(modData, true);
-                RES_ResidentialModels.updateModels(modData);
-                DET_DetentionModels.updateModels(modData);
-                EXC_MinesModels.updateModels(modData);
-                if (!modData.weaponShowCase) Ellie_DefaultModels.updateWeaponModelsManual(modData);
+            }
+            catch
+            {
+                retryInsert = true;
+                retryMissing = missing;
+                MelonLogger.Error("An Error occured insterting the models. Retry");
             }
         }
 
