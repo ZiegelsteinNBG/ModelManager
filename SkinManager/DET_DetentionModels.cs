@@ -19,7 +19,7 @@ namespace ModelManager
         static List<GameObject> activeModels = new List<GameObject>();
         public static List<GameObject> loadModels()
         {
-            string[] rigs = { "isa_metarig_IK", "ariane_metarig_IK_ghost", "ariane_metarig_IK_uniform", "alina_metarig_IK" }; //"isa_re_metarig_IK Variant"
+            string[] rigs = { "isa_metarig_IK", "ariane_metarig_IK_ghost", "ariane_metarig_IK_uniform", "alina_metarig_IK" }; //, "isa_re_metarig_IK Variant"
             // Set Path active
             if ((HelperMethodsCM.setChildActive("Cutscenes/Alina Vision Smiling 1/", "DET_Alina_1", true) && HelperMethodsCM.setChildActive("Cutscenes/Alina Vision Smiling 1/DET_Alina_1", "CharSpace", true)))
             {
@@ -82,6 +82,8 @@ namespace ModelManager
             GameObject basicCopy = HelperMethodsCM.copyObjectDDOL("__Prerequisites__/Character Origin/Character Root/Ellie_Default/Normal/Body", "basicCopy", false);
             foreach (GameObject model in models)
             {
+                    GameObject existing = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{model.name}");
+                    if (existing != null) GameObject.Destroy(existing);
                     ModelData currModel = data.FindModelDataByName(model.name);
                     MelonLogger.Msg(model.name);
                     GameObject modelCopy = new GameObject();

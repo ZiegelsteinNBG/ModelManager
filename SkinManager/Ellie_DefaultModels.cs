@@ -24,19 +24,35 @@ namespace ModelManager
                 {
                     modelEx = model;
                     ModelData modelData = modData.FindModelDataByName(model);
+
                     for (int i = 0; i < modelData.modelParts.Length; i++)
                     {
                         if (prepare) HelperMethodsCM.setChildActive("__Prerequisites__/Character Origin/Character Root/Ellie_Default/", model, true);
                         
                         string part = modelData.modelParts[i];
                         modelPartEx = part;
+                        GameObject gameObject = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{model}/{part}");
                         if (part == "Hat")
                         {
                             HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/", part, modelData.active[i]);
                             continue;
+                        }else if (model == "Normal" && part == "Body")
+                        {
+                            gameObject.SetActive(true);
+                            SkinnedMeshRenderer meshRendererOrigin = gameObject.GetComponent<SkinnedMeshRenderer>();
+                            meshRendererOrigin.GetComponent<Renderer>().castShadows = modelData.active[i];
+                            Material material = meshRendererOrigin.material;
+                            if (modelData.active[i])
+                            {
+                                material.color = new Color(1, 1, 1, 1);
+                            }
+                            else
+                            {
+                                material.color = new Color(0, 0, 0, -1);
+                            }
+                            continue;
                         }
-                        GameObject gameObject = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{model}/{part}");
-
+                     
                         if (prepare) gameObject.SetActive(false);
                         else HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{model}", part, modelData.active[i]);
                     }
@@ -53,6 +69,7 @@ namespace ModelManager
                     GameObject modelSize = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/");
                     if (modData != null) modelSize.transform.localScale = new Vector3(modData.playerModelSize, modData.playerModelSize, modData.playerModelSize);
 
+                    // TODO: Remove Height due to bug causes
                     float newHeight = modData.localHeight;
                     float diffHeight = localHeight - newHeight;
                     GameObject charHeight = GameObject.Find($"__Prerequisites__/Character Origin/");
