@@ -1,5 +1,6 @@
 ﻿using Harmony;
 using MelonLoader;
+using ModOverlayGUI;
 using RootMotion.FinalIK;
 using System;
 using System.Collections.Generic;
@@ -204,11 +205,36 @@ namespace ModelManager
                 {
 
                     Transform dest_Transform = dest.bones[dict[bone.name]];
-                    if ((bone.name == "neck") && dest.name == "MNHRBody_001")
+                    if (dest.name == "MNHRBody_001") {
+                        if (bone.name == "neck")
+                        {
+                            Vector3 eul = bone.localEulerAngles;
+                            //eul.x = 0;
+                            eul.y = dest_Transform.localEulerAngles.y;
+                            dest_Transform.localEulerAngles = eul;
+                            continue;
+                        }else if((bone.name == "shoulder_R" || bone.name == "shoulder_L")&& InventoryManager.EquippedWeapon != null && InventoryManager.EquippedWeapon.name != "Shotgun")
+                        {
+                            Vector3 eul = bone.localEulerAngles;
+                            
+                            if (PlayerState.aiming)
+                            {
+                                eul.y = eul.y * 1.08f;
+                                if(bone.name == "shoulder_L") eul.z = eul.z * 0.885f;
+                                else eul.z = eul.z * 0.995f;
+                            }
+                            else
+                            {
+                                eul.z = eul.z * 1.08f;
+                            }
+                            dest_Transform.localEulerAngles = eul;
+                            continue;
+                        }
+                    }else if((bone.name == "shoulder_R" || bone.name == "shoulder_L") && (dest.name == "FKLR_Normal" || dest.name == "FKLR_Body_Corrupted")&& PlayerState.aiming && InventoryManager.EquippedWeapon.name != "Shotgun")
                     {
                         Vector3 eul = bone.localEulerAngles;
-                        //eul.x = 0;
-                        eul.y = dest_Transform.localEulerAngles.y;
+                        eul.y = eul.y * 1.065f;
+                        eul.z = eul.z * 0.99f;
                         dest_Transform.localEulerAngles = eul;
                         continue;
                     }
@@ -222,12 +248,20 @@ namespace ModelManager
             }
         }
 
-        public static void copyComponent(GameObject dest, String comp_or, String name)
+        public static void copyComponent(GameObject dest, String comp_or, String name, bool setNull)
         {
             GameObject comp_copy = copyObjectDDOL(comp_or, name, false);
             setParent(dest, comp_copy);
-            comp_copy.transform.localPosition = Vector3.zero;
-            comp_copy.transform.localRotation = new Quaternion(0, 0, 0, 0);
+            if (setNull)
+            {
+                comp_copy.transform.localPosition = Vector3.zero;
+                comp_copy.transform.localRotation = new Quaternion(0, 0, 0, 0);
+            }
+            else
+            {
+                comp_copy.transform.localPosition = GameObject.Find(comp_or).transform.localPosition;
+                comp_copy.transform.localRotation = GameObject.Find(comp_or).transform.localRotation;
+            }
         }
 
         public static SkinnedMeshRenderer insertAlternative(GameObject model_or, String model_s, String name, String body, String normal, Dictionary<String, int> dict)
@@ -246,10 +280,10 @@ namespace ModelManager
             SkinnedMeshRenderer skin = model.transform.Find(body).GetComponent<SkinnedMeshRenderer>();
             skin.bones[dict["hips"]].localPosition = Vector3.zero;
 
-            copyComponent(skin.bones[dict["hand_R"]].gameObject, "__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/WeaponMount/", "WeaponMount");
-            copyComponent(skin.bones[dict["hips"]].gameObject, "__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/VisibleEquip/", "VisibleEquip");
-            copyComponent(skin.bones[dict["chest"]].gameObject, "__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/Nitro Model/", "Nitro Model");
-            copyComponent(skin.bones[dict["chest"]].gameObject, "__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/FlashLightFlare/", "FlashLightFlare");
+            copyComponent(skin.bones[dict["hand_R"]].gameObject, "__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/WeaponMount/", "WeaponMount", true);
+            copyComponent(skin.bones[dict["hips"]].gameObject, "__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/VisibleEquip/", "VisibleEquip", true);
+            copyComponent(skin.bones[dict["chest"]].gameObject, "__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/Nitro Model/", "Nitro Model", false);
+            copyComponent(skin.bones[dict["chest"]].gameObject, "__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/FlashLightFlare/", "FlashLightFlare", true);
 
             return skin;
         }
@@ -262,6 +296,77 @@ namespace ModelManager
             GameObject.Destroy(obj.GetComponent<Animator>());
             GameObject.Destroy(obj.GetComponent<CapsuleCollider>());
             return obj.transform.Find(body).GetComponent<SkinnedMeshRenderer>();
+        }
+
+        public static void weaponShowcaseActive(String root, bool active)
+        {
+            if (!active) setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{root}/hips/spine/chest/", "Nitro Model", active);
+            setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{root}/hips/", "VisibleEquip", active);
+            setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{root}/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/WeaponMount/", "Weapons", active);
+        }
+
+        public static void updateWeaponModelsManual(ModData modData, String root)
+        {
+            for (int i = 0; i < modData.weaponBool.Length; i++)
+            {
+                if (modData.weaponName[i] == "Nitro Model")
+                {
+                    HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{root}/hips/spine/chest/", "Nitro Model", modData.weaponBool[i]);
+                }
+                else
+                {
+                    HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{root}/hips/VisibleEquip/", modData.weaponName[i], modData.weaponBool[i]);
+                }
+            }
+        }
+
+        public static void updateWeaponModelsDynamic(String root)
+        {
+            try
+            {
+                string[] equipedWeapons = new string[] { "Rifle", "Pistol", "Revolver", "Shotgun", "FlareGun", "Machete" };
+                foreach (AnItem item in InventoryManager.elsterItems.keys)
+                {
+                    bool elsterInventory = equipedWeapons.Contains(item.name);
+                    if (elsterInventory)
+                    {
+                        bool active = false;
+                        if ((InventoryManager.EquippedWeapon != null && !InventoryManager.EquippedWeapon.parentItem.Equals(item)) || InventoryManager.EquippedWeapon == null) active = true;
+                        if (item.name == "Rifle")
+                        {
+                            HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{root}/hips/spine/chest/", "Nitro Model", active);
+                        }
+                        else
+                        {
+                            string visibleName = item.name;
+                            switch (visibleName)
+                            {
+                                case ("FlareGun"):
+                                    visibleName = "FGun Model";
+                                    break;
+                                case ("Revolver"):
+                                    visibleName = "Revolver Model";
+                                    break;
+                            }
+                            HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{root}/hips/VisibleEquip/", visibleName, active);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex.Message);
+            }
+        }
+
+        public static void weaponScaling(String root, float size)
+        {
+            AnWeapon equipedWeapon = InventoryManager.EquippedWeapon;
+            if (equipedWeapon != null)
+            {
+                GameObject weaponSize = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{root}/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/WeaponMount/Weapons/{equipedWeapon.parentItem.name}");
+                if (weaponSize != null) weaponSize.transform.localScale = new Vector3(size, size, size);
+            }
         }
     }
 }

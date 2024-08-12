@@ -1,12 +1,14 @@
 ﻿using MelonLoader;
 using ModOverlayGUI;
 using RootMotion.FinalIK;
+using Rotorz.Games;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static UTJ.FrameCapturer.DataPath;
 
 namespace ModelManager
 {
@@ -18,14 +20,17 @@ namespace ModelManager
         static Dictionary<String, int> dict_star = new Dictionary<String, int>();
         static GameObject star_root;
         static SkinnedMeshRenderer star_skin;
+        static bool star_enabled;
 
         static Dictionary<String, int> dict_isa = new Dictionary<String, int>();
         static GameObject isa_root;
         static SkinnedMeshRenderer isa_skin;
+        static bool isa_enabled;
 
         static Dictionary<String, int> dict_mnhr = new Dictionary<String, int>();
         static GameObject mnhr_root;
         static SkinnedMeshRenderer mnhr_skin;
+        static bool mnhr_enabled;
         public static List<GameObject> loadModels()
         {
             HelperMethodsCM.setChildActive("Star Room/", "Chunk", true);
@@ -50,52 +55,94 @@ namespace ModelManager
             mnhr.SetActive(false);
             mnhr_skin = HelperMethodsCM.destroyAndSkin(mnhr, "MNHRBody_001");
             dict_mnhr = HelperMethodsCM.dictList(mnhr_skin);
+            GameObject faceShield = mnhr.transform.Find("MNHRFaceplate_001").gameObject;
+            SkinnedMeshRenderer smr = faceShield.GetComponent<SkinnedMeshRenderer>();
+            MeshFilter mf = faceShield.AddComponent<MeshFilter>();
+            mf.mesh = smr.sharedMesh;
+            Material mat = smr.material;
+            GameObject.Destroy(smr);
+            MeshRenderer meshR = faceShield.AddComponent<MeshRenderer>();
+            meshR.material = mat;
+            faceShield.transform.parent = mnhr.transform.Find("MNHR_Normal/Root/hips/spine/chest/neck/head");
+            faceShield.SetActive(false);
             models.Add(mnhr);   
 
-            MelonLogger.Msg("Models from DET_DetentionModels loaded");
+            MelonLogger.Msg("Models from EXC_MinesModels loaded");
             return models;
         }
 
-        public static void updateModels(ModData modData)
+        public static void updateModels(ModData modData, float diffHeight)
         {
+
             foreach (GameObject model in activeModels)
             {
                 ModelData modelData = modData.FindModelDataByName(model.name);
+                switch (modelData.modelName)
+                {
+                    case "isa_re_metarig_IK Variant":
+                        isa_enabled = modelData.active[modelData.bodyIdx];
+                        HelperMethodsCM.weaponShowcaseActive("Root_isa", isa_enabled);
+                        if (isa_enabled) HelperMethodsCM.weaponScaling("Root_isa", modData.weaponModelSize);
+                        GameObject charHeight = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{isa_root.name}");
+                        if (charHeight != null) charHeight.transform.localPosition = charHeight.transform.localPosition - new Vector3(0, 0, diffHeight);
+                        break;
+                    case "STAR_Normal_Anim":
+                        star_enabled = modelData.active[modelData.bodyIdx];
+                        HelperMethodsCM.weaponShowcaseActive("Root_STAR", star_enabled);
+                        if(star_enabled) HelperMethodsCM.weaponScaling("Root_STAR", modData.weaponModelSize);
+                        charHeight = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{star_root.name}");
+                        if (charHeight != null) charHeight.transform.localPosition = charHeight.transform.localPosition - new Vector3(0, 0, diffHeight);
+                        break;
+                    case "MNHR_Normal_Anim":
+                        mnhr_enabled = modelData.active[modelData.bodyIdx];
+                        HelperMethodsCM.weaponShowcaseActive("Root_MNHR", mnhr_enabled);
+                        if (mnhr_enabled) HelperMethodsCM.weaponScaling("Root_MNHR", modData.weaponModelSize);
+                        charHeight = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{mnhr_root.name}");
+                        if (charHeight != null) charHeight.transform.localPosition = charHeight.transform.localPosition - new Vector3(0, 0, diffHeight);
+                        break;
+                }
                 for (int i = 0; i < modelData.modelParts.Length; i++)
                 {
                     string part = modelData.modelParts[i];
+                    if(part == "Knife")
+                    {
+                        HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root_isa/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/", part, modelData.active[i]);
+                        continue;
+                    }else if(part == "MNHRFaceplate_001")
+                    {
+                        continue;
+                    }
                     GameObject gameObject = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{model.name}/{part}");
                     if (gameObject != null)
                     {
                         HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{model.name}", part, modelData.active[i]);
                     }
-                    else MelonLogger.Error($"updateModels failed at EllieDefault: __Prerequisites__/Character Origin/Character Root/Ellie_Default/{model.name}/{modelData.modelParts[i]}");
+                    else MelonLogger.Error($"updateModels failed at EXC_MinesModels: __Prerequisites__/Character Origin/Character Root/Ellie_Default/{model.name}/{modelData.modelParts[i]}");
                 }
             }
         }
         public static void updatePose(ModData data)
         {
             if (mnhr_skin == null) return;
-            if (data.FindModelDataByName("STAR_Normal_Anim").active[3])
-            {
-                SkinnedMeshRenderer defaultSkin = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/Normal/Body").GetComponent<SkinnedMeshRenderer>();
-                HelperMethodsCM.updatePose(defaultSkin, star_skin, dict_star);
-            }
+            SkinnedMeshRenderer defaultSkin = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/Normal/Body").GetComponent<SkinnedMeshRenderer>();
+            if (star_enabled)HelperMethodsCM.updatePose(defaultSkin, star_skin, dict_star);
+            if (isa_enabled)HelperMethodsCM.updatePose(defaultSkin, isa_skin, dict_isa);
+            if (mnhr_enabled) HelperMethodsCM.updatePose(defaultSkin, mnhr_skin, dict_mnhr);
+            
+        }
 
-            if (data.FindModelDataByName("isa_re_metarig_IK Variant").active[0])
-            {
-                SkinnedMeshRenderer defaultSkin = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/Normal/Body").GetComponent<SkinnedMeshRenderer>();
-                HelperMethodsCM.updatePose(defaultSkin, isa_skin, dict_isa);
-            }
+        public static void updateWeaponModelsManual(ModData modData)
+        {
+            if (star_enabled) HelperMethodsCM.updateWeaponModelsManual(modData, "Root_STAR");
+            if (isa_enabled) HelperMethodsCM.updateWeaponModelsManual(modData, "Root_isa");
+            if (mnhr_enabled) HelperMethodsCM.updateWeaponModelsManual(modData, "Root_MNHR");
+        }
 
-            if (data.FindModelDataByName("MNHR_Normal_Anim").active[0])
-            {
-                SkinnedMeshRenderer defaultSkin = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/Normal/Body").GetComponent<SkinnedMeshRenderer>();
-                HelperMethodsCM.updatePose(defaultSkin, mnhr_skin, dict_mnhr);
-            }
-
-
-            //TODO Height Weapons etc
+        public static void updateWeaponModelsDynamic()
+        {
+            if (star_enabled) HelperMethodsCM.updateWeaponModelsDynamic("Root_STAR");
+            if (isa_enabled) HelperMethodsCM.updateWeaponModelsDynamic("Root_isa");
+            if (mnhr_enabled) HelperMethodsCM.updateWeaponModelsDynamic("Root_MNHR");
         }
 
         public static void insertModels(ModData data)
@@ -113,18 +160,21 @@ namespace ModelManager
                 {
                     mnhr_skin = HelperMethodsCM.insertAlternative(model, "MNHR_Normal_Anim", "MNHR", "MNHRBody_001", "MNHR_Normal", dict_mnhr);
                     activeModels.Add(GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/MNHR_Normal_Anim/"));
+                    mnhr_root = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root_MNHR");
                     continue;
                 }
                 else if (model.name == "isa_re_metarig_IK Variant")
                 {
                     isa_skin = HelperMethodsCM.insertAlternative(model, "isa_re_metarig_IK Variant", "isa", "Body", "metarig", dict_isa);
                     activeModels.Add(GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/isa_re_metarig_IK Variant/"));
+                    isa_root = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root_isa");
                     continue;
                 }
                 else if(model.name == "STAR_Normal_Anim")
                 {
                     star_skin = HelperMethodsCM.insertAlternative(model, "STAR_Normal_Anim", "STAR", "STARBody_001", "STAR_Normal", dict_star);
                     activeModels.Add(GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/STAR_Normal_Anim/"));
+                    star_root = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root_STAR");
                     continue;
                 }
 

@@ -44,31 +44,40 @@ namespace ModelManager
 
         private static bool retryInsert;
         private static bool retryMissing;
+        private static float localHeight { get; set; }
+        private static int selIdx;
 
-        
         public override void OnApplicationStart()
         {
             currentDirectory = System.Environment.CurrentDirectory;
             targetDirectory = Path.Combine(currentDirectory, "Mods", "ModGUI");
             Directory.SetCurrentDirectory(targetDirectory);
-            modData = ModDataManager.LoadModData();
+            //modData = ModDataManager.LoadModData();
+            ModDataSets sets = ModDataManager.LoadModDataSet();
+            modData = sets.modDatas[sets.aktiv];
             if (modData != null)
             {
                 version = modData.call;
             }
+            selIdx = sets.aktiv;
             Directory.SetCurrentDirectory(currentDirectory);
-            
+            UnityEngine.Application.runInBackground = true;
+
         }
 
         public override void OnUpdate()
         {
             base.OnUpdate();
             Directory.SetCurrentDirectory(targetDirectory);
-            modData = ModDataManager.LoadModData();
+            //modData = ModDataManager.LoadModData();
+            ModDataSets sets = ModDataManager.LoadModDataSet();
+            
+            if (sets != null)modData = sets.modDatas[sets.aktiv];
+            else return;
             Directory.SetCurrentDirectory(currentDirectory);
             if(modData == null)
             {
-                MelonLogger.Msg("Retry loading XML...");
+                //MelonLogger.Msg("Retry loading XML...");
                 return;
             }
             if(!guiLoaded)modData.windowed = false;
@@ -118,15 +127,31 @@ namespace ModelManager
                 if (GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{modData.modelData[modData.modelData.Count-1].modelName}") == null) setModels(true);
                 Ellie_DefaultModels.updateModels(modData, true);
                 updatePose();
-
-                if (version < modData.call)
+                //MelonLogger.Msg($"Version: {version}    Call: {modData.call}\nSelIdx: {selIdx} Aktiv: {sets.aktiv}");
+                if (version < modData.call || selIdx != sets.aktiv)
                 {
+                    
                     setModels(false);
+                    selIdx = sets.aktiv;
                     version = modData.call;
                 }
                 // TODO ManualUpdate New modData
-                if (modData.weaponShowCase) Ellie_DefaultModels.updateWeaponModelsDynamic();
-                else Ellie_DefaultModels.updateWeaponModelsManual(modData);
+                if (modData.weaponShowCase)
+                {
+                    Ellie_DefaultModels.updateWeaponModelsDynamic();
+                    BOS_AdlerModels.updateWeaponModelsDynamic();
+                    EXC_MinesModels.updateWeaponModelsDynamic();
+                    DET_DetentionModels.updateWeaponModelsDynamic();
+                    RES_ResidentialModels.updateWeaponModelsDynamic();
+                }
+                else
+                {
+                    Ellie_DefaultModels.updateWeaponModelsManual(modData);
+                    BOS_AdlerModels.updateWeaponModelsManual(modData);
+                    EXC_MinesModels.updateWeaponModelsManual(modData);
+                    DET_DetentionModels.updateWeaponModelsManual(modData);
+                    RES_ResidentialModels.updateWeaponModelsManual(modData);
+                }
                 
             }
         }
@@ -137,13 +162,12 @@ namespace ModelManager
             {
                 if (modData.windowed && Screen.fullScreenMode != FullScreenMode.Windowed)
                 {
-                    UnityEngine.Application.runInBackground = true;
+                    
                     playerScreenMode = Screen.fullScreenMode;
                     Screen.fullScreenMode = FullScreenMode.Windowed;
                 }
                 else if ( !modData.windowed && Screen.fullScreenMode == FullScreenMode.Windowed)
                 {
-                    UnityEngine.Application.runInBackground = false;
                     Screen.fullScreenMode = playerScreenMode;
                 }
             }
@@ -252,11 +276,14 @@ namespace ModelManager
             Scene currScene = SceneManager.GetActiveScene();
             return sceneNames.Contains(currScene.name);
         }
+
         private static void updatePose()
         {
+            DET_DetentionModels.updatePose(modData);
             RES_ResidentialModels.updatePose(modData);
             EXC_MinesModels.updatePose(modData);
             BOS_AdlerModels.updatePose(modData);
+            BOS_AdlerModels.updateFX();
         }
         private static void setModels(bool missing)
         {
@@ -273,20 +300,27 @@ namespace ModelManager
                         RES_ResidentialModels.insertModels(modData);
                         EXC_MinesModels.insertModels(modData);
                         BOS_AdlerModels.insertModels();
-                        Ellie_DefaultModels.localHeight = 0.0f;
+                        
                     }
+                    float newHeight = modData.localHeight;
+                    float diffHeight = localHeight - newHeight;
                     Ellie_DefaultModels.updateModels(modData, true);
-                    RES_ResidentialModels.updateModels(modData);
-                    DET_DetentionModels.updateModels(modData);
-                    EXC_MinesModels.updateModels(modData);
-                    if (!modData.weaponShowCase) Ellie_DefaultModels.updateWeaponModelsManual(modData);
+                    RES_ResidentialModels.updateModels(modData, diffHeight);
+                    DET_DetentionModels.updateModels(modData, diffHeight);
+                    EXC_MinesModels.updateModels(modData, diffHeight);
+                    BOS_AdlerModels.updateModels(modData, diffHeight);
+                    localHeight = modData.localHeight;
+                    if (!modData.weaponShowCase)
+                    {
+                        Ellie_DefaultModels.updateWeaponModelsManual(modData);
+                    }
                 }
             }
-            catch
+            catch (Exception e) 
             {
                 retryInsert = true;
                 retryMissing = missing;
-                MelonLogger.Error("An Error occured insterting the models. Retry");
+                MelonLogger.Error($"An Error occured insterting the models. Retry\nException: {e.Message}\nStackTrace: {e.StackTrace}");
             }
         }
 

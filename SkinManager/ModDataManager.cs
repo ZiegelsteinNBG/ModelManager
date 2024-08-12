@@ -56,7 +56,53 @@ namespace ModOverlayGUI
                 }
             }
         }
-       
+
+
+        public static void SaveModDataSets(ModDataSets modData)
+        {
+            lock (lockObject)
+            {
+                try
+                {
+                    XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets));
+                    using (FileStream fs = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                    {
+                        serializer.Serialize(fs, modData);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error saving data: " + ex.Message);
+                }
+            }
+        }
+
+        public static ModDataSets LoadModDataSet()
+        {
+            lock (lockObject)
+            {
+                try
+                {
+                    if (!File.Exists(FilePath))
+                    {
+                        
+                        return new ModDataSets(); // Return default settings if file doesn't exist
+                    }
+
+                    XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets));
+                    using (FileStream fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        return (ModDataSets)serializer.Deserialize(fs);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //Console.WriteLine("Error loading settings: " + ex.Message);
+                    return null; // Return default settings in case of error
+                }
+            }
+        }
+
         public static ModData iniModData()
         {
             ModData modData = new ModData
@@ -76,63 +122,79 @@ namespace ModOverlayGUI
             modData.weaponBool = new bool[modData.weaponName.Length];
 
             // Elster Models (0-4)
-            String[] modelParts_ELNormal = { "Hat", "Body", "Hair", "Tasche", "HairHead"};                                      // 1
-            modData.modelData.Add(new ModelData("Normal", modelParts_ELNormal, new bool[] { true, true, true, true, true}));    // M1
+            String[] modelParts_ELNormal = { "Hat", "Body", "Hair", "Tasche", "HairHead"};                                     
+            modData.modelData.Add(new ModelData("Normal", modelParts_ELNormal, new bool[] { true, true, true, true, true}, 1, true));  
+            String[] modelParts_ELArmor = { "Body", "Hair", "HairHead", "Armor", "TascheArmor" };                      
+            modData.modelData.Add(new ModelData("Armored", modelParts_ELArmor, new bool[modelParts_ELArmor.Length], 0, true));   
 
-            String[] modelParts_ELArmor = { "Body", "Hair", "HairHead", "Armor", "TascheArmor" };                       // 0
-            modData.modelData.Add(new ModelData("Armored", modelParts_ELArmor, new bool[modelParts_ELArmor.Length]));   // M1
+            String[] modelParts_ELEVA = { "Body", "Helmet", "Neck", "Backpack", "TascheArmor", "Visor", "Visor Layer2"};    
+            modData.modelData.Add(new ModelData("EVA", modelParts_ELEVA, new bool[modelParts_ELEVA.Length], 0, true));               
 
-            String[] modelParts_ELEVA = { "Body", "Helmet", "Neck", "Backpack", "TascheArmor", "Visor", "Visor Layer2"};    // 0
-            modData.modelData.Add(new ModelData("EVA", modelParts_ELEVA, new bool[modelParts_ELEVA.Length]));               // M1
+            String[] modelParts_ELCrippled = { "Body", "Organs", "Hair", "HairHead"};                                           
+            modData.modelData.Add(new ModelData("Crippled", modelParts_ELCrippled, new bool[modelParts_ELCrippled.Length], 0, true));   
 
-            String[] modelParts_ELCrippled = { "Body", "Organs", "Hair", "HairHead"};                                        // 0
-            modData.modelData.Add(new ModelData("Crippled",modelParts_ELCrippled, new bool[modelParts_ELCrippled.Length]));  // M1
-
-            String[] modelParts_IsaPast = { "Body", "Hair", "HairHead", "Skirt", "Braid"};                              // 0
-            modData.modelData.Add(new ModelData("Isa_Past", modelParts_IsaPast, new bool[modelParts_IsaPast.Length]));  // M1
+            String[] modelParts_IsaPast = { "Body", "Hair", "HairHead", "Skirt", "Braid"};                              
+            modData.modelData.Add(new ModelData("Isa_Past", modelParts_IsaPast, new bool[modelParts_IsaPast.Length], 0, true));     
 
             // DET_Detention (5-9)
-            String[] modelParts_isa_metarig_IK = { "Body", "Poncho", "Hair_Isa", "HairHead_Isa", "Braid" };                                 // 0
-            modData.modelData.Add(new ModelData("isa_metarig_IK", modelParts_isa_metarig_IK, new bool[modelParts_isa_metarig_IK.Length]));  // M1
+            String[] modelParts_isa_metarig_IK = { "Body", "Poncho", "Hair_Isa", "HairHead_Isa", "Braid" };                                
+            modData.modelData.Add(new ModelData("isa_metarig_IK", modelParts_isa_metarig_IK, new bool[modelParts_isa_metarig_IK.Length], 0, true)); 
+            String[] modelParts_arianeGhost = { "Body", "Hair_Ariane", "HairHead_Ariane", "HairLong", "Skirt" };                               
+            modData.modelData.Add(new ModelData("ariane_metarig_IK_ghost", modelParts_arianeGhost, new bool[modelParts_arianeGhost.Length], 0, true));  
 
-            String[] modelParts_arianeGhost = { "Body", "Hair_Ariane", "HairHead_Ariane", "HairLong", "Skirt" };                                // 0
-            modData.modelData.Add(new ModelData("ariane_metarig_IK_ghost", modelParts_arianeGhost, new bool[modelParts_arianeGhost.Length]));   // M1
+            String[] modelParts_arianeUniform = { "Body", "Hair_Ariane", "HairHead_Ariane", "Tasche" };                                             
+            modData.modelData.Add(new ModelData("ariane_metarig_IK_uniform", modelParts_arianeUniform, new bool[modelParts_arianeUniform.Length], 0, true));
 
-            String[] modelParts_arianeUniform = { "Body", "Hair_Ariane", "HairHead_Ariane", "Tasche" };                                             // 0
-            modData.modelData.Add(new ModelData("ariane_metarig_IK_uniform", modelParts_arianeUniform, new bool[modelParts_arianeUniform.Length])); // M1
+            String[] modelParts_alina = { "AlinaBodyDetailsArmor", "Body", "FemaleMilitaryHat", "Hair_Alina", "HairHead_Alina", "PonyTail", "Tasche"};  
+            modData.modelData.Add(new ModelData("alina_metarig_IK", modelParts_alina, new bool[modelParts_alina.Length], 1, true));                              
 
-            String[] modelParts_alina = { "AlinaBodyDetailsArmor", "Body", "FemaleMilitaryHat", "Hair_Alina", "HairHead_Alina", "PonyTail", "Tasche"};  // 2
-            modData.modelData.Add(new ModelData("alina_metarig_IK", modelParts_alina, new bool[modelParts_alina.Length]));                              // M1
-
-            String[] modelParts_STCR = { "STCR_Baton", "STCR_Belt", "STCR_Body", "STCR_Hair", "STCR_HairHead" };            // 2
-            modData.modelData.Add(new ModelData("STCR_Normal_Anim", modelParts_STCR, new bool[modelParts_STCR.Length]));    // M2
+            String[] modelParts_STCR = { "STCR_Baton", "STCR_Belt", "STCR_Body", "STCR_Hair", "STCR_HairHead" };           
+            modData.modelData.Add(new ModelData("STCR_Normal_Anim", modelParts_STCR, new bool[modelParts_STCR.Length], 2, false));    
 
             // RES_Residential (10-12)
-            String[] modelParts_adler = { "Body", "Hair_Adler" };                                                           // 0
-            modData.modelData.Add(new ModelData("adler_metarig_IK", modelParts_adler, new bool[modelParts_adler.Length]));  // M1
+            String[] modelParts_adler = { "Body", "Hair_Adler" };                                                           
+            modData.modelData.Add(new ModelData("adler_metarig_IK", modelParts_adler, new bool[modelParts_adler.Length], 0, true));  
 
-            String[] modelParts_ARAR = { "ARAR_Hair", "ARAR_HairHead", "ARAR_NormalBody", "Amigasa" };              // 2
-            modData.modelData.Add(new ModelData("ARAR_Normal", modelParts_ARAR, new bool[modelParts_ARAR.Length])); // M1
+            String[] modelParts_ARAR = { "ARAR_Hair", "ARAR_HairHead", "ARAR_NormalBody", "Amigasa" };              
+            modData.modelData.Add(new ModelData("ARAR_Normal", modelParts_ARAR, new bool[modelParts_ARAR.Length], 2, true));
 
-            String[] modelParts_KLBR = { "KLBR_Armor", "KLBR_Belt", "KLBR_Hair", "KLBR_HairHead", "KLBR_Normal_Body" };     // 4
-            modData.modelData.Add(new ModelData("KLBR_Normal_Anim", modelParts_KLBR, new bool[modelParts_KLBR.Length]));    // M2
+            String[] modelParts_KLBR = { "KLBR_Armor", "KLBR_Belt", "KLBR_Hair", "KLBR_HairHead", "KLBR_Normal_Body" };     
+            modData.modelData.Add(new ModelData("KLBR_Normal_Anim", modelParts_KLBR, new bool[modelParts_KLBR.Length], 4, false));    
 
             // EXC_Mines (13-16)
-            String[] modelParts_STAR = { "STAR_Hair", "STAR_HairHead", "STARBaton_001", "STARBody_001" };                   // 3
-            modData.modelData.Add(new ModelData("STAR_Normal_Anim", modelParts_STAR, new bool[modelParts_STAR.Length]));    // M2
+            String[] modelParts_STAR = { "STAR_Hair", "STAR_HairHead", "STARBaton_001", "STARBody_001" };                   
+            modData.modelData.Add(new ModelData("STAR_Normal_Anim", modelParts_STAR, new bool[modelParts_STAR.Length], 3, false));
 
-            String[] modelParts_EULR = { "EULR_Hair", "EULR_HairHead", "EULR_Normal_Body", "FemaleMilitaryHat_001" };      // 2
-            modData.modelData.Add(new ModelData("EULR_Normal_Anim", modelParts_EULR, new bool[modelParts_EULR.Length]));   // M1
+            String[] modelParts_EULR = { "EULR_Hair", "EULR_HairHead", "EULR_Normal_Body", "FemaleMilitaryHat_001" };     
+            modData.modelData.Add(new ModelData("EULR_Normal_Anim", modelParts_EULR, new bool[modelParts_EULR.Length], 2, true));   
 
-            String[] modelParts_isaRe = { "Body", "Braid", "Hair_Isa", "HairHead_Isa", "Isas_Knife", "Skirt_Short", "Tasche" };     // 0
-            modData.modelData.Add(new ModelData("isa_re_metarig_IK Variant", modelParts_isaRe, new bool[modelParts_isaRe.Length])); // M2
+            String[] modelParts_isaRe = { "Body", "Braid", "Hair_Isa", "HairHead_Isa", "Isas_Knife", "Skirt_Short", "Tasche", "Knife" };    
+            modData.modelData.Add(new ModelData("isa_re_metarig_IK Variant", modelParts_isaRe, new bool[modelParts_isaRe.Length], 0, false)); 
 
-            String[] modelParts_MNHR = { "MNHRBody_001", "MNHRFaceplate_001" };                                             // 0
-            modData.modelData.Add (new ModelData("MNHR_Normal_Anim", modelParts_MNHR, new bool[modelParts_MNHR.Length]));   // M2
+            String[] modelParts_MNHR = { "MNHRBody_001" };//"MNHRFaceplate_001"                                             
+            modData.modelData.Add (new ModelData("MNHR_Normal_Anim", modelParts_MNHR, new bool[modelParts_MNHR.Length], 0, false));
 
             // BOS_Adler
-            String[] modelParts_FKLR = { "MNHRBody_001", "MNHRFaceplate_001" };                                            
-            modData.modelData.Add(new ModelData("FKLR", modelParts_FKLR, new bool[modelParts_FKLR.Length]));   
+            // >> FKLR
+            // STARShield
+
+            // FKLR>>Corrupted
+            // FKLR_Body_Corrupted
+
+            // FKLR>>Normal
+            // FKLR_Normal
+            // FKLR_Normal_001
+            // STCR_Hair
+            // STCR_HairHead
+
+            // metarig>>Root_FKLR>>hips>>SpearL-1 / -3 / SpearR-1 / -3
+            // metarig>>Root_FKLR>>hips>>spine>>chest>>Halo
+            // metarig/Root_FKLR/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/Pivot
+            // FKLR_SpearHand
+            // FKLR_Sword
+
+            String[] modelParts_FKLR = { "STARShield", "FKLR_Body_Corrupted", "FKLR_Normal", "FKLR_Normal_001", "STCR_Hair", "STCR_HairHead", "SpearL-1", "SpearL-2", "SpearL-3", "SpearR-1", "SpearR-2", "SpearR-3", "Halo", "FKLR_SpearHand", "FKLR_Sword"};//, "Point Light"                                    
+            modData.modelData.Add(new ModelData("FKLR_Anim", modelParts_FKLR, new bool[modelParts_FKLR.Length], -1, false));   
 
             return modData;
         }
@@ -143,13 +205,17 @@ namespace ModOverlayGUI
         public string modelName { get; set; }
         public string[] modelParts { get; set; }
         public bool[] active { get; set; }
+        public int bodyIdx { get; set; }
+        public bool M1 { get; set; }
 
         public ModelData() { }
-        public ModelData(String modelName, String[] modelParts, bool[] active)
+        public ModelData(String modelName, String[] modelParts, bool[] active, int bodyIdx, bool M1)
         {
             this.modelName = modelName;
             this.modelParts = modelParts;
             this.active = active;
+            this.bodyIdx = bodyIdx;
+            this.M1 = M1;
         }
 
         public override int GetHashCode()
@@ -181,5 +247,21 @@ namespace ModOverlayGUI
         public string[] weaponName { get; set; }
         public bool weaponShowCase { get; set; }
         public bool[] weaponBool { get; set; }
+    }
+    [Serializable]
+    public class ModDataSets
+    {
+        public int aktiv { get; set; }
+        public ModData[] modDatas { get; set; }
+
+        public ModDataSets()
+        {
+            aktiv = 0;
+            modDatas = new ModData[5];
+            for (int i = 0; i < modDatas.Length; i++)
+            {
+                modDatas[i] = ModDataManager.iniModData();
+            }
+        }
     }
 }

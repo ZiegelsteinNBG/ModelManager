@@ -17,6 +17,11 @@ namespace ModelManager
     {
         static List<GameObject> models = new List<GameObject>();
         static List<GameObject> activeModels = new List<GameObject>();
+
+        static Dictionary<String, int> dict_stcr = new Dictionary<String, int>();
+        static GameObject stcr_root;
+        static SkinnedMeshRenderer stcr_skin;
+        static bool stcr_enabled;
         public static List<GameObject> loadModels()
         {
             string[] rigs = { "isa_metarig_IK", "ariane_metarig_IK_ghost", "ariane_metarig_IK_uniform", "alina_metarig_IK" }; //, "isa_re_metarig_IK Variant"
@@ -44,9 +49,13 @@ namespace ModelManager
                     metarig.SetActive(false);
                     models.Add(metarig);
                 }
+
                 HelperMethodsCM.setChildActive("Rationing/", "Chunk", true);
                 GameObject stcr = HelperMethodsCM.copyObjectDDOL("Rationing/Chunk/STCR-S2307/STCR_Normal_Anim", "STCR_Normal_Anim", true);
                 HelperMethodsCM.setChildActive(stcr, "STCR_Baton");
+                stcr_skin = HelperMethodsCM.destroyAndSkin(stcr, "STCR_Body");
+                dict_stcr = HelperMethodsCM.dictList(stcr_skin);
+                GameObject.Destroy(stcr.transform.Find("STCR_Normal/Root/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/Shotgun/").gameObject);
                 stcr.SetActive(false);
                 models.Add(stcr);
             }
@@ -57,11 +66,19 @@ namespace ModelManager
             MelonLogger.Msg("Models from DET_DetentionModels loaded");
             return models;
         }
-        public static void updateModels(ModData modData)
+        public static void updateModels(ModData modData, float diffHeight)
         {
             foreach (GameObject model in activeModels)
             {
                 ModelData modelData = modData.FindModelDataByName(model.name);
+                if (modelData.modelName == "STCR_Normal_Anim")
+                {
+                    stcr_enabled = modelData.active[modelData.bodyIdx];
+                    HelperMethodsCM.weaponShowcaseActive("Root_STCR", stcr_enabled);
+                    if (stcr_enabled) HelperMethodsCM.weaponScaling("Root_STCR", modData.weaponModelSize);
+                    GameObject charHeight = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{stcr_root.name}");
+                    if (charHeight != null) charHeight.transform.localPosition = charHeight.transform.localPosition - new Vector3(0, 0, diffHeight);
+                }
                 for (int i = 0; i < modelData.modelParts.Length; i++)
                 {
                     string part = modelData.modelParts[i];
@@ -74,6 +91,22 @@ namespace ModelManager
                 }
             }
         }
+        public static void updatePose(ModData data)
+        {
+
+            SkinnedMeshRenderer defaultSkin = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/Normal/Body").GetComponent<SkinnedMeshRenderer>();
+            HelperMethodsCM.updatePose(defaultSkin, stcr_skin, dict_stcr);
+        }
+
+        public static void updateWeaponModelsManual(ModData modData)
+        {
+            if (stcr_enabled) HelperMethodsCM.updateWeaponModelsManual(modData, "Root_STCR");
+        }
+
+        public static void updateWeaponModelsDynamic()
+        {
+            if (stcr_enabled) HelperMethodsCM.updateWeaponModelsDynamic("Root_STCR");
+        }
 
         public static void insertModels(ModData data)
         {
@@ -84,6 +117,13 @@ namespace ModelManager
             {
                     GameObject existing = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/{model.name}");
                     if (existing != null) GameObject.Destroy(existing);
+                    if(model.name == "STCR_Normal_Anim")
+                    {
+                        stcr_skin = HelperMethodsCM.insertAlternative(model, "STCR_Normal_Anim", "STCR", "STCR_Body", "STCR_Normal", dict_stcr);
+                        activeModels.Add(GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/STCR_Normal_Anim/"));
+                        stcr_root = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root_STCR/");
+                        continue;
+                    }
                     ModelData currModel = data.FindModelDataByName(model.name);
                     MelonLogger.Msg(model.name);
                     GameObject modelCopy = new GameObject();
