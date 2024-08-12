@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using MelonLoader;
 using ModelManager;
 
-[assembly: MelonInfo(typeof(Costumizer), "ModelManager", "1.0.1", "Ziegelstein")]
+[assembly: MelonInfo(typeof(Costumizer), "ModelManager", "v1.1.0", "Ziegelstein")]
 [assembly: MelonGame("", "")]
 
 // General Information about an assembly is controlled through the following

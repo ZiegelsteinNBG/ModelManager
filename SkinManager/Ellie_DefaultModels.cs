@@ -13,13 +13,16 @@ namespace ModelManager
     {
         private static string[] modelNames = new string[]{ "Normal", "Armored", "Crippled", "EVA","Isa_Past"};
         private static string[] equipedWeapons = new string[] { "Rifle", "Pistol", "Revolver", "Shotgun", "FlareGun", "Machete"};
-        public static float localHeight { get; set; }
+        
+        private static bool bodyActive;
+        private static String root = "Root";
 
         public static void updateModels(ModData modData, bool prepare)
         {
             string modelEx = "";
             string modelPartEx = "";
-            try { 
+            try {
+                bodyActive = bodyActiveM(modData);
                 foreach (string model in modelNames)
                 {
                     modelEx = model;
@@ -59,22 +62,14 @@ namespace ModelManager
                 }
                 if (!prepare)
                 {
-                    AnWeapon equipedWeapon = InventoryManager.EquippedWeapon;
-                    if (equipedWeapon != null)
-                    {
-                        GameObject weaponSize = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/WeaponMount/Weapons/{equipedWeapon.parentItem.name}");
-                        if (weaponSize != null) weaponSize.transform.localScale = new Vector3(modData.weaponModelSize, modData.weaponModelSize, modData.weaponModelSize);
-                    }
+                    // TODO Implementation for M2
+                    if (bodyActive) HelperMethodsCM.weaponScaling(root, modData.weaponModelSize);
 
                     GameObject modelSize = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/");
                     if (modData != null) modelSize.transform.localScale = new Vector3(modData.playerModelSize, modData.playerModelSize, modData.playerModelSize);
 
-                    // TODO: Remove Height due to bug causes
-                    float newHeight = modData.localHeight;
-                    float diffHeight = localHeight - newHeight;
-                    GameObject charHeight = GameObject.Find($"__Prerequisites__/Character Origin/");
-                    if (charHeight != null) charHeight.transform.localPosition = charHeight.transform.localPosition + new Vector3(0, 0, diffHeight);
-                    localHeight = modData.localHeight;
+                    // TODO Implementation for M2
+                    HelperMethodsCM.weaponShowcaseActive(root, bodyActive);
                 }
                 else
                 {
@@ -90,57 +85,21 @@ namespace ModelManager
 
         public static void updateWeaponModelsManual(ModData modData)
         {
-            for (int i = 0; i < modData.weaponBool.Length; i++) {
-                if (modData.weaponName[i] == "Nitro Model")
-                {
-                    HelperMethodsCM.setChildActive("__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/", "Nitro Model", modData.weaponBool[i]);
-                }
-                else
-                {
-                    HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/VisibleEquip/", modData.weaponName[i], modData.weaponBool[i]);
-                }
-            }    
+            if (bodyActive)  HelperMethodsCM.updateWeaponModelsManual(modData, root);    
         }
 
-        // __Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/shoulder_R/upper_arm_R/forearm_R/hand_R/WeaponMount/Weapons/ Size -> localeScale
-        // __Prerequisites__/Character Origin/Character Root/Ellie_Default/
+        private static bool bodyActiveM(ModData data)
+        {
+            foreach(ModelData model in data.modelData)
+            {
+                if (model.M1 && model.active[model.bodyIdx])return true;
+            }
+            return false;
+        }
 
         public static void updateWeaponModelsDynamic()
         {
-            try
-            {
-                foreach (AnItem item in InventoryManager.elsterItems.keys)
-                {
-                    bool elsterInventory = equipedWeapons.Contains(item.name);
-                    if (elsterInventory)
-                    {
-                        bool active = false;
-                        if (InventoryManager.EquippedWeapon != null && !InventoryManager.EquippedWeapon.parentItem.Equals(item)) active = true;
-                        if (item.name == "Rifle")
-                        {
-                            HelperMethodsCM.setChildActive("__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/spine/chest/", "Nitro Model", active);
-                        }
-                        else
-                        {
-                            string visibleName = item.name;
-                            switch (visibleName)
-                            {
-                                case ("FlareGun"):
-                                    visibleName = "FGun Model";
-                                    break;
-                                case ("Revolver"):
-                                    visibleName = "Revolver Model";
-                                    break;
-                            }
-                            HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root/hips/VisibleEquip/", visibleName, active);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MelonLogger.Error(ex.Message);
-            }
+            if (bodyActive) HelperMethodsCM.updateWeaponModelsDynamic(root);
         }
     }
 }

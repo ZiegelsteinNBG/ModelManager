@@ -19,6 +19,7 @@ namespace ModelManager
         static Dictionary<String, int> dict_klbr = new Dictionary<String, int>();
         static GameObject klbr_root;
         static SkinnedMeshRenderer klbr_skin;
+        static bool klbr_enabled;
         public static List<GameObject> loadModels()
         {
             // ADLR
@@ -46,11 +47,20 @@ namespace ModelManager
             return models;
         }
 
-        public static void updateModels(ModData modData)
+        public static void updateModels(ModData modData, float diffHeight)
         {
             foreach (GameObject model in activeModels)
             {
                 ModelData modelData = modData.FindModelDataByName(model.name);
+                if(modelData.modelName == "KLBR_Normal_Anim")
+                {
+                    klbr_enabled = modelData.active[modelData.bodyIdx];
+                    HelperMethodsCM.weaponShowcaseActive("Root_KLBR", klbr_enabled);
+                    if (klbr_enabled) HelperMethodsCM.weaponScaling("Root_KLBR", modData.weaponModelSize);
+                    GameObject charHeight = GameObject.Find($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/{klbr_root.name}");
+                    if (charHeight != null) charHeight.transform.localPosition = charHeight.transform.localPosition - new Vector3(0, 0, diffHeight);
+
+                }
                 for (int i = 0; i < modelData.modelParts.Length; i++)
                 {
                     string part = modelData.modelParts[i];
@@ -76,8 +86,18 @@ namespace ModelManager
                 HelperMethodsCM.updatePose(defaultSkin, klbr_skin, dict_klbr);
             }
 
-            //TODO Height Weapons etc
         }
+
+        public static void updateWeaponModelsManual(ModData modData)
+        {
+            if (klbr_enabled) HelperMethodsCM.updateWeaponModelsManual(modData, "Root_KLBR");
+        }
+
+        public static void updateWeaponModelsDynamic()
+        {
+            if (klbr_enabled) HelperMethodsCM.updateWeaponModelsDynamic("Root_KLBR");
+        }
+
         public static void insertModels(ModData data)
         {
             activeModels = new List<GameObject>();
@@ -96,6 +116,7 @@ namespace ModelManager
                 {
                     klbr_skin = HelperMethodsCM.insertAlternative(model, "KLBR_Normal_Anim", "KLBR", "KLBR_Normal_Body", "KLBR_Normal", dict_klbr);
                     activeModels.Add(GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/KLBR_Normal_Anim/"));
+                    klbr_root = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root_KLBR");
                     continue;
                 }
                 GameObject modelCopy = new GameObject();

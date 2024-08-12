@@ -27,6 +27,9 @@ namespace ModGUI
         private float playerSize;
         private bool[] active;
         private float height;
+        private int selectedIndex;
+        private ModData[] modDataArray = new ModData[5];
+        private ModDataSets modDataSets;
 
         private ModData modData = new ModData();
         [DllImport("user32.dll")]
@@ -37,7 +40,11 @@ namespace ModGUI
             // Initialization code for ImGui
             ImGui.CreateContext();
             ImGui.GetIO().Fonts.AddFontDefault();
-            modData = ModDataManager.LoadModData();
+            modDataSets = ModDataManager.LoadModDataSet();
+            //modData = ModDataManager.LoadModData();
+            selectedIndex = modDataSets.aktiv;
+            modDataArray = modDataSets.modDatas;
+            modData = modDataSets.modDatas[selectedIndex];
             if (modData != null)
             {
                 elsterString = new string[modData.modelData.Count];
@@ -49,7 +56,9 @@ namespace ModGUI
                 loadData();
             }
             modData.windowed = showGui;
-            ModDataManager.SaveModData(modData);
+            //ModDataManager.SaveModData(modData);
+            modDataSets.modDatas[selectedIndex] = modData;
+            ModDataManager.SaveModDataSets(modDataSets);
         }
 
         private void loadData()
@@ -77,6 +86,22 @@ namespace ModGUI
             modData.call++;
             ModDataManager.SaveModData(modData);
         }
+
+        private void writeDataSet()
+        {
+            if (modData != null)
+            {
+                modData.weaponShowCase = dynamicHolster;
+                showWeapon = modData.weaponBool;
+                modData.playerModelSize = playerSize;
+                modData.weaponModelSize = weaponSize;
+                modData.localHeight = height;
+            }
+            modData.call++;
+            modDataSets.aktiv = selectedIndex;
+            modDataSets.modDatas[selectedIndex] = modData;
+            ModDataManager.SaveModDataSets(modDataSets);
+        }
         protected override void Render()
         {
             if (Process.GetProcessesByName(gameName).Length == 0 && !debugMod) Close();
@@ -91,16 +116,50 @@ namespace ModGUI
             }
             
             if (showGui) {
-                ImGui.Begin("ModelManager",ImGuiWindowFlags.MenuBar );
+                ImGui.Begin("ModelManager v1.1.0",ImGuiWindowFlags.MenuBar );
 
                 //ImGui.ShowDemoWindow();
                 if (!help)
                 {
                     if (ImGui.Button("Apply Changes"))
                     {
-                        writeData();
+                        //writeData();
+                        writeDataSet(); 
+                    }
+                    ImGui.SameLine();
+                    if (ImGui.Button("Reset Default"))
+                    {
+                        modData = ModDataManager.iniModData();
+                        loadData();
+                    }
+
+
+                    if (ImGui.BeginCombo("Save files", $"Save {selectedIndex}"))
+                    {
+                        for (int i = 0; i < modDataArray.Length; i++)
+                        {
+                            // Use the item index as the label for simplicity, but you can customize this
+                            string label = $"Save {i}";
+
+                            bool isSelected = (i == selectedIndex);
+                            if (ImGui.Selectable(label, isSelected))
+                            {
+                                selectedIndex = i; // Set the selected index when an item is clicked
+                                modData = modDataArray[selectedIndex];
+                                loadData();
+                            }
+
+                            // Set the initial focus when opening the combo (optional)
+                            if (isSelected)
+                            {
+                                ImGui.SetItemDefaultFocus();
+                            }
+                        }
+
+                        ImGui.EndCombo();
                     }
                 }
+                    
 
                 if (ImGui.BeginTabBar("Manager"))
                 {
@@ -109,10 +168,15 @@ namespace ModGUI
                     if (ImGui.BeginTabItem("Help"))
                     {
                         help = true;
-                        ImGui.Text("\nWhile this GUI is open, the game will be windowed to prevent it from \nbeing minimized while interacting with the GUI.\n\nPress F7 to toggle the overlay on and off.\n" +
-                                   "By pressing [Apply Changes], the current changes will be applied to the game\n" +
-                                   "and the changes will be saved to an XML file.\n\n" +
-                                   "For suggestions/ bug report please make a post on Nexusmods\nor contact me on Discord [ziegelstein]");
+                        ImGui.Text("\nWhile this GUI is open, the game will be windowed to prevent it from \nbeing minimized while interacting with the GUI.\n");
+                        ImGui.Separator();
+                        ImGui.Text("\nPress F7 to toggle the overlay on and off.\n\n\n" +
+                                       "[Reset Default] will reset the current save to default.\n[doesn't apply by default]\n\n\n"+
+                                       "[Save files] allows you to save up to 5 different configurations.\n[doesn't apply by default]\n\n\n" +
+                                       "By only pressing [Apply Changes], the current changes will be applied to the game\n" +
+                                       "and the changes will be saved to an XML file.\n");
+                        ImGui.Separator();
+                        ImGui.Text("\nFor suggestions/ bug report please make a post on Nexusmods\nor contact me on Discord [ziegelstein]");
                         ImGui.EndTabItem();
                     }
 
@@ -127,7 +191,7 @@ namespace ModGUI
                             if (height > 1.5f) height = 1.5f;
                         }
 
-                        ImGui.Text("NOTICE: User needs to adjust height manually\n -> Intended for models like KLBR, STRC and STAR.\n");
+                        ImGui.Text("NOTICE:\nONLY WORKS FOR FOLLOWING MODELS:\n\t->FKLR, MNHR, STAR, STRC, KLBR, Isa_Re\nUser needs to adjust height manually\n -> Intended for models like KLBR, STRC and STAR.\n");
                         ImGui.SeparatorText("Model Size");
                         if(ImGui.InputFloat("Size [0.25|3.0]", ref playerSize, 0.01f, 1.0f, "%.3f"))
                         {
