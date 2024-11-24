@@ -11,6 +11,7 @@ namespace ModOverlayGUI
     {
         private static string FilePath = "CMData2.xml";
         private static readonly object lockObject = new object();
+        private static string TempFilePath = "CMData2_tmp.xml";
 
         public static void SaveModData(ModData modData)
         {
@@ -52,7 +53,11 @@ namespace ModOverlayGUI
                 catch (Exception ex)
                 {
                     Console.WriteLine("Error loading settings: " + ex.Message);
-                    return null; // Return default settings in case of error
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine("Inner exception: " + ex.InnerException.Message);
+                    }
+                    return null;
                 }
             }
         }
@@ -65,9 +70,22 @@ namespace ModOverlayGUI
                 try
                 {
                     XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets));
-                    using (FileStream fs = new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+
+                    // Save to temporary file
+                    using (FileStream fs = new FileStream(TempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
                     {
                         serializer.Serialize(fs, modData);
+                        fs.Close();
+                    }
+
+                    // Replace the original file
+                    if (File.Exists(FilePath))
+                    {
+                        ReplaceFileWithRetry(TempFilePath, FilePath, "BackupXML.bak"); 
+                    }
+                    else
+                    {
+                        File.Move(TempFilePath, FilePath); // Move temp file to destination if original doesn't exist
                     }
                 }
                 catch (Exception ex)
@@ -77,10 +95,67 @@ namespace ModOverlayGUI
             }
         }
 
+
+        static void ReplaceFileWithRetry(string source, string destination, string backup = null)
+        {
+            const int maxAttempts = 3;
+            const int delayBetweenAttempts = 100; // Milliseconds
+            int attempts = 0;
+
+            while (attempts < maxAttempts)
+            {
+                try
+                {
+                    File.Replace(source, destination, backup);
+                    return;
+                }
+                catch (IOException)
+                {
+                    attempts++;
+                    Task.Delay(delayBetweenAttempts).Wait();
+                }
+            }
+
+            throw new IOException("Unable to replace file after multiple attempts.");
+        }
+
         public static ModDataSets LoadModDataSet()
         {
             lock (lockObject)
             {
+                int attempts = 3;
+                while (attempts > 0)
+                {
+                    try
+                    {
+                        if (!File.Exists(FilePath))
+                        {
+                            return new ModDataSets(); // Return default if file doesn't exist
+                        }
+
+                        XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets));
+                        using (FileStream fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        {
+                            ModDataSets set = (ModDataSets)serializer.Deserialize(fs);
+                            fs.Close();
+                            return set;
+                        }
+                    }
+                    catch (IOException)
+                    {
+                        attempts--;
+                        Task.Delay(100).Wait(); // Wait briefly before retrying
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error loading settings: " + ex.Message);
+                        ModDataSets backup = LoadBackupFile("BackupXML.bak");
+                        if(backup != null) Console.WriteLine("Loading Backup successfull");
+                        return backup;
+                    }
+                }
+                return null;
+                /*
                 try
                 {
                     if (!File.Exists(FilePath))
@@ -97,9 +172,44 @@ namespace ModOverlayGUI
                 }
                 catch (Exception ex)
                 {
-                    //Console.WriteLine("Error loading settings: " + ex.Message);
-                    return null; // Return default settings in case of error
+                    Console.WriteLine("Error loading settings: " + ex.Message);
+                    return new ModDataSets(); // Return default settings in case of error
                 }
+                */
+            }
+        }
+
+        static ModDataSets LoadBackupFile(string backupFilePath)
+        {
+            try
+            {
+                if (!File.Exists(backupFilePath))
+                {
+                    Console.WriteLine("Backup file not found: " + backupFilePath);
+                    return null;
+                }
+                ModDataSets set = null;
+                XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets));
+                using (FileStream fs = new FileStream(backupFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    set = (ModDataSets)serializer.Deserialize(fs);
+
+                }
+                if (set != null)
+                {
+                    using (FileStream fs = new FileStream(TempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        serializer.Serialize(fs, set);
+                        fs.Close();
+                    }
+                    ReplaceFileWithRetry(TempFilePath, FilePath);
+                }
+                return set;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error loading backup file: " + ex.Message);
+                return null;
             }
         }
 
@@ -203,7 +313,11 @@ namespace ModOverlayGUI
     public class ModelData
     {
         public string modelName { get; set; }
+        [XmlArray("modelParts")]
+        [XmlArrayItem("string")]
         public string[] modelParts { get; set; }
+        [XmlArray("active")]
+        [XmlArrayItem("boolean")]
         public bool[] active { get; set; }
         public int bodyIdx { get; set; }
         public bool M1 { get; set; }
@@ -232,7 +346,7 @@ namespace ModOverlayGUI
         public int call {  get; set; }
         // PLayModel
         public float playerModelSize { get; set; }
-
+        [XmlElement("ModelData")]
         public List<ModelData> modelData { get; set; }
         public float localHeight { get; set; }
 
@@ -244,8 +358,12 @@ namespace ModOverlayGUI
 
         // WeaponModels
         public float weaponModelSize { get; set; }
+        [XmlArray("weaponName")]
+        [XmlArrayItem("string")]
         public string[] weaponName { get; set; }
         public bool weaponShowCase { get; set; }
+        [XmlArray("weaponBool")]
+        [XmlArrayItem("boolean")]
         public bool[] weaponBool { get; set; }
     }
     [Serializable]

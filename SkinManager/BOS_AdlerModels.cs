@@ -123,7 +123,6 @@ namespace ModelManager
                 HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/FKLR_Anim/Normal/", "STCR_Hair_1", false);
                 HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/FKLR_Anim/Normal/", "STCR_HairHead_1", false);
                 HelperMethodsCM.setChildActive($"__Prerequisites__/Character Origin/Character Root/Ellie_Default/FKLR_Anim/Normal/", "FKLR_Normal_002", false);
-
             }
         }
 
@@ -152,6 +151,6 @@ namespace ModelManager
             models.transform.Find("Normal").gameObject.SetActive(false);
             fklr_root = GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/metarig/Root_FKLR");
             activeModels = (GameObject.Find("__Prerequisites__/Character Origin/Character Root/Ellie_Default/FKLR/"));
-}
+        }
     }
 }
