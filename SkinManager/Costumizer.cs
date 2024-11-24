@@ -16,6 +16,7 @@ using ModOverlayGUI;
 using UnityEditor;
 using System.Runtime.InteropServices;
 using Debug = UnityEngine.Debug;
+using static PlatformManagement.SaveSystemWorkerBase;
 
 
 
@@ -49,7 +50,7 @@ namespace ModelManager
         private static bool started = false;
 
         private ModDataSets sets;
-        private DateTime previousTimestamp;
+        private DateTime previousTimestamp = DateTime.MinValue;
 
         public override void OnApplicationStart()
         {
@@ -68,8 +69,7 @@ namespace ModelManager
             currentDirectory = System.Environment.CurrentDirectory;
             targetDirectory = Path.Combine(currentDirectory, "Mods", "ModGUI");
             Directory.SetCurrentDirectory(targetDirectory);
-            sets = ModDataManager.LoadModDataSet();
-            previousTimestamp = DateTime.Now;
+            ModDataSets sets = ModDataManager.LoadModDataSet();
             UnityEngine.Application.runInBackground = true;
             modData = sets?.modDatas[sets.aktiv];
             if (modData != null)
@@ -90,13 +90,14 @@ namespace ModelManager
                 return;
             }
             Directory.SetCurrentDirectory(targetDirectory);
-            DateTime lastModified = File.GetLastWriteTime("CMData2.xml");
+            DateTime lastModified = File.GetLastWriteTime("BackupXML.bak");
 
             // Store this value and compare it later to detect changes
-            if (lastModified > previousTimestamp)
+            if (lastModified > previousTimestamp || !File.Exists("BackupXML.bak"))
             {
                 Console.WriteLine("The file has been modified.");
                 sets = ModDataManager.LoadModDataSet();
+                previousTimestamp = lastModified;
 
             }
             
