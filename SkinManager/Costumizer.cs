@@ -33,7 +33,7 @@ namespace ModelManager
         private static Scene hookScene;
 
         private static ModData modData;
-        private static int version;
+        private static int version = -1;
 
         private static FullScreenMode playerScreenMode;
 
@@ -45,39 +45,71 @@ namespace ModelManager
         private static bool retryInsert;
         private static bool retryMissing;
         private static float localHeight { get; set; }
-        private static int selIdx;
+        private static int selIdx = -1;
+        private static bool started = false;
+
+        private ModDataSets sets;
+        private DateTime previousTimestamp;
 
         public override void OnApplicationStart()
+        {
+            try
+            {
+                startMod(); 
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.ToString());
+            }
+        }
+
+        public void startMod()
         {
             currentDirectory = System.Environment.CurrentDirectory;
             targetDirectory = Path.Combine(currentDirectory, "Mods", "ModGUI");
             Directory.SetCurrentDirectory(targetDirectory);
-            //modData = ModDataManager.LoadModData();
-            ModDataSets sets = ModDataManager.LoadModDataSet();
-            modData = sets.modDatas[sets.aktiv];
+            sets = ModDataManager.LoadModDataSet();
+            previousTimestamp = DateTime.Now;
+            UnityEngine.Application.runInBackground = true;
+            modData = sets?.modDatas[sets.aktiv];
             if (modData != null)
             {
                 version = modData.call;
+                selIdx = sets.aktiv;
             }
-            selIdx = sets.aktiv;
             Directory.SetCurrentDirectory(currentDirectory);
-            UnityEngine.Application.runInBackground = true;
-
+            started = true;
         }
-
         public override void OnUpdate()
         {
             base.OnUpdate();
+            if (!started)
+            {
+                MelonLogger.Log("Restart ModStart");
+                startMod();
+                return;
+            }
             Directory.SetCurrentDirectory(targetDirectory);
-            //modData = ModDataManager.LoadModData();
-            ModDataSets sets = ModDataManager.LoadModDataSet();
+            DateTime lastModified = File.GetLastWriteTime("CMData2.xml");
+
+            // Store this value and compare it later to detect changes
+            if (lastModified > previousTimestamp)
+            {
+                Console.WriteLine("The file has been modified.");
+                sets = ModDataManager.LoadModDataSet();
+
+            }
             
             if (sets != null)modData = sets.modDatas[sets.aktiv];
-            else return;
+            else
+            {
+                MelonLogger.Msg("Retry loading XML...sets");
+                return;
+            }
             Directory.SetCurrentDirectory(currentDirectory);
             if(modData == null)
             {
-                //MelonLogger.Msg("Retry loading XML...");
+                MelonLogger.Msg("Retry loading XML...data");
                 return;
             }
             if(!guiLoaded)modData.windowed = false;

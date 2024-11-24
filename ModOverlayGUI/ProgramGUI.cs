@@ -14,7 +14,7 @@ namespace ModGUI
     {
         static String gameName = "Signalis";
         private bool showGui = true;
-        private bool debugMod = false;
+        private bool debugMod = true;
         private bool help = true;
 
         private float weaponSize;
