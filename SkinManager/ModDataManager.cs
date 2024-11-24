@@ -69,7 +69,7 @@ namespace ModOverlayGUI
             {
                 try
                 {
-                    XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets));
+                    XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets), new XmlRootAttribute("ModDataSets"));
 
                     // Save to temporary file
                     using (FileStream fs = new FileStream(TempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -130,10 +130,11 @@ namespace ModOverlayGUI
                     {
                         if (!File.Exists(FilePath))
                         {
-                            return new ModDataSets(); // Return default if file doesn't exist
+                            ModDataSets modData = new ModDataSets();
+                            SaveModDataSets(modData);
+                            return modData; 
                         }
-
-                        XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets));
+                        XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets), new XmlRootAttribute("ModDataSets"));
                         using (FileStream fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
                             ModDataSets set = (ModDataSets)serializer.Deserialize(fs);
@@ -183,13 +184,15 @@ namespace ModOverlayGUI
         {
             try
             {
+                XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets), new XmlRootAttribute("ModDataSets"));
                 if (!File.Exists(backupFilePath))
                 {
                     Console.WriteLine("Backup file not found: " + backupFilePath);
-                    return null;
+                    ModDataSets modData = new ModDataSets();
+                    SaveModDataSets(modData);
+                    return modData; // Return default if file doesn't exist
                 }
                 ModDataSets set = null;
-                XmlSerializer serializer = new XmlSerializer(typeof(ModDataSets));
                 using (FileStream fs = new FileStream(backupFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     set = (ModDataSets)serializer.Deserialize(fs);
